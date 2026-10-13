@@ -43,9 +43,9 @@ h1,h2,.card b,.msg,#msg,#big,.vp,.boom,.res td{font-family:Bangers,Impact,system
 .vp .lap{position:absolute;right:1.5vh;top:1.5vh;font-size:5vh;background:#fff;color:var(--ink);border:.4vh solid var(--ink);border-radius:1vh;padding:0 1.2vh;box-shadow:.5vh .5vh 0 var(--ink);transform:rotate(2deg)}
 .vp .slot{position:absolute;left:50%;top:1.5vh;transform:translateX(-50%);width:10vh;height:10vh;border-radius:50%;background:#fff;border:.5vh solid var(--ink);box-shadow:.5vh .5vh 0 var(--ink);display:flex;align-items:center;justify-content:center;font-size:6vh}
 .vp .slot.empty{opacity:.45}
-.vp .tag{position:absolute;left:1.5vh;bottom:1.5vh;font-size:3vh;background:var(--c);border:.4vh solid var(--ink);border-radius:1vh;padding:.2vh 1vh;display:flex;align-items:center;gap:.8vh;color:#fff;-webkit-text-stroke:.12vh var(--ink)}
+.vp .tag{position:absolute;left:1.5vh;top:15vh;font-size:3vh;background:var(--c);border:.4vh solid var(--ink);border-radius:1vh;padding:.2vh 1vh;display:flex;align-items:center;gap:.8vh;color:#fff;-webkit-text-stroke:.12vh var(--ink)}
 .vp .tag img{width:4vh;height:4vh}
-.vp.off::after{content:'📡 Manette déconnectée — pilote auto';position:absolute;left:50%;bottom:2vh;transform:translateX(-50%);background:var(--ink);color:var(--y);padding:.6vh 1.6vh;border-radius:1vh;font-size:2.8vh}
+.vp.off::after{content:'📡 Manette déconnectée — pilote auto';position:absolute;left:50%;top:14vh;transform:translateX(-50%);background:var(--ink);color:var(--y);padding:.6vh 1.6vh;border-radius:1vh;font-size:2.8vh}
 .vp.boost::before{content:'';position:absolute;inset:-20%;background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.55) 0 1.2deg,transparent 1.2deg 9deg);
  -webkit-mask:radial-gradient(circle,transparent 38%,#000 72%);mask:radial-gradient(circle,transparent 38%,#000 72%);animation:spd .15s linear infinite}
 @keyframes spd{to{transform:rotate(4deg)}}
@@ -54,14 +54,20 @@ h1,h2,.card b,.msg,#msg,#big,.vp,.boom,.res td{font-family:Bangers,Impact,system
 #big{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-size:24vh;color:var(--y);-webkit-text-stroke:.6vh var(--ink);text-shadow:1.2vh 1.2vh 0 var(--ink);pointer-events:none}
 #mini{position:fixed;right:2vh;bottom:2vh;width:24vh;height:24vh;pointer-events:none}
 #mini.mid{left:50%;top:50%;right:auto;bottom:auto;transform:translate(-50%,-50%);width:20vh;height:20vh}
+#cmt{position:fixed;left:50%;bottom:2.5vh;transform:translateX(-50%) scale(.6);opacity:0;display:flex;align-items:flex-end;gap:1.5vh;pointer-events:none;transition:.25s cubic-bezier(.3,1.6,.6,1);max-width:70vw;z-index:4}
+#cmt.on{opacity:1;transform:translateX(-50%) scale(1)}
+#cmt .av{flex:none;width:10vh;height:10vh;border-radius:50%;background:#ffeb3b;border:.5vh solid var(--ink);box-shadow:.5vh .5vh 0 var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:5vh;line-height:1}
+#cmt .av small{font:2vh Bangers,Impact,sans-serif;color:var(--ink)}
+#cmt p{position:relative;margin:0 0 3vh;background:#fff;color:var(--ink);border:.5vh solid var(--ink);border-radius:2.5vh;padding:1.2vh 2.4vh;font:4vh Bangers,Impact,system-ui,sans-serif;letter-spacing:.04em;box-shadow:.7vh .7vh 0 var(--ink)}
+#cmt p::before{content:'';position:absolute;left:-2.6vh;bottom:1.5vh;border:1.3vh solid transparent;border-right:2vh solid var(--ink)}
 #toast{display:none;position:fixed;bottom:2vh;left:50%;transform:translateX(-50%);background:#111;color:#ffeb3b;padding:.8vh 2vh;border-radius:1vh;font-size:2.4vh;z-index:5}
 #net{display:none;position:fixed;top:1vh;left:50%;transform:translateX(-50%);background:#e53935;padding:.8vh 2vh;border-radius:1vh;font-size:2.2vh;border:.3vh solid var(--ink)}
 </style>
 <div id=ui><h1>🏎️ Kart Party !</h1>
  <div class=lob><div><div id=qr></div><p style="font-size:2.4vh;margin:1.4vh 0 .4vh">Scanne le QR code avec ton téléphone</p><div id=url></div></div><div id=pl></div></div>
  <div id=msg></div><div id=opts></div></div>
-<div id=huds></div><div id=big></div><canvas id=mini width=240 height=240></canvas><div id=net></div><div id=toast></div>
+<div id=huds></div><div id=big></div><canvas id=mini width=240 height=240></canvas><div id=net></div><div id=cmt><div class=av>🎙️<small>Gégé</small></div><p></p></div><div id=toast></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
-<script src="shared.js"></script><script src="toon.js"></script><script src="tracks.js"></script><script src="game.js"></script>
+<script src="shared.js"></script><script src="audio.js"></script><script src="commentator.js"></script><script src="toon.js"></script><script src="tracks.js"></script><script src="game.js"></script>

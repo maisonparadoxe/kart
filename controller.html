@@ -5,7 +5,14 @@
 *{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
 :root{--ink:#111;--y:#ffeb3b}
 html,body{margin:0;height:100%;color:var(--ink);font-family:system-ui,sans-serif;overflow:hidden;touch-action:manipulation;
- background:radial-gradient(circle,rgba(0,0,0,.12) 1.5px,transparent 1.6px) 0 0/12px 12px,linear-gradient(160deg,#fff7c2,#ffd166)}
+ background:radial-gradient(circle,rgba(0,0,0,.16) 1.5px,transparent 1.6px) 0 0/12px 12px,linear-gradient(160deg,rgba(255,255,255,.25),rgba(0,0,0,.15)),var(--kc,#ffd166)}
+/* Fond aux couleurs du joueur : couleur du kart + grand emblème en filigrane */
+#wm{position:fixed;left:50%;top:50%;width:80vmin;height:80vmin;transform:translate(-50%,-50%) rotate(-12deg);background:center/contain no-repeat;opacity:.22;pointer-events:none;z-index:0}
+section{position:relative;z-index:1}
+h3{align-self:flex-start;background:#fff;border:3px solid var(--ink);border-radius:8px;padding:1px 10px;box-shadow:2px 2px 0 var(--ink);transform:rotate(-1deg)}
+#st,.note,#rt+.big+.note{background:#fff;border:3px solid var(--ink);border-radius:10px;padding:6px 10px}#st:empty{display:none}
+[data-s=s1] #snd{left:auto;right:12px;transform:none}
+#snd{position:fixed;top:6px;left:50%;transform:translateX(-50%);z-index:8;width:44px;height:44px;padding:0;border-radius:50%;font-size:22px;background:#fff;box-shadow:2px 2px 0 var(--ink)}
 h2,h3,button,.opt b,#info,.big{font-family:Bangers,Impact,system-ui,sans-serif;letter-spacing:.05em;font-weight:normal}
 h2{font-size:42px;margin:0;color:#e53935;-webkit-text-stroke:2px var(--ink);text-shadow:3px 3px 0 var(--ink);transform:rotate(-2deg)}
 h3{margin:6px 0 0;font-size:24px}
@@ -23,12 +30,12 @@ button{background:#e53935;color:#fff;font-size:26px;box-shadow:3px 3px 0 var(--i
 .sw>.sel{outline:4px solid #e53935;outline-offset:2px}
 .sw input[type=color]{padding:0;overflow:hidden}
 #pv{width:100%;max-width:420px;align-self:center;background:#fff;border:3px solid var(--ink);border-radius:14px;box-shadow:4px 4px 0 var(--ink)}
-.bar{position:sticky;bottom:-16px;margin:0 -16px -16px;padding:14px 16px 16px;background:linear-gradient(transparent,#ffd166 25%);display:flex;flex-wrap:wrap;gap:8px}
+.bar{position:sticky;bottom:-16px;margin:0 -16px -16px;padding:14px 16px 16px;background:linear-gradient(transparent,var(--kc,#ffd166) 25%);display:flex;flex-wrap:wrap;gap:8px}
 .bar button{flex:1 1 40%;padding:10px;font-size:22px}
 #st,.note{font-size:16px;text-align:center}
 #conn{display:none;position:fixed;left:50%;top:8px;transform:translateX(-50%);z-index:9;background:var(--ink);color:var(--y);padding:6px 14px;border-radius:10px;font-size:16px;white-space:nowrap}
 /* Manette */
-#pad{position:relative;padding:0;background:#222 radial-gradient(circle,rgba(255,255,255,.06) 1.5px,transparent 1.6px) 0 0/12px 12px}
+#pad{position:relative;padding:0;background:rgba(0,0,0,.28)}
 #pad.on{display:block}
 .b{position:absolute;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#555;font-family:Bangers,Impact,sans-serif;touch-action:none;width:15vh;height:15vh;font-size:6vh;color:#fff;border:.6vh solid var(--ink);box-shadow:.6vh .6vh 0 #000}
 .b.pill{border-radius:3vh;width:24vh;height:11vh;font-size:4.5vh}
@@ -38,12 +45,12 @@ button{background:#e53935;color:#fff;font-size:26px;box-shadow:3px 3px 0 var(--i
 #info{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;color:#fff;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:1vh}
 #ipos{font-size:14vh;line-height:1;color:var(--y);-webkit-text-stroke:.3vh var(--ink);text-shadow:.5vh .5vh 0 #000}
 #islot{width:16vh;height:16vh;border-radius:50%;background:#fff;border:.6vh solid var(--ink);display:flex;align-items:center;justify-content:center;font-size:10vh}
-#ilap{font-size:5vh}
+#ilap{font-size:5vh;-webkit-text-stroke:.15vh var(--ink);text-shadow:.3vh .3vh 0 var(--ink)}
 #rot{display:none;position:absolute;inset:0;background:#222;color:#fff;align-items:center;justify-content:center;text-align:center;font-size:24px;padding:20px}
 @media (orientation:portrait){#pad.on #rot{display:flex}}
 .big{font-size:64px;color:var(--y);-webkit-text-stroke:2px var(--ink);text-shadow:3px 3px 0 var(--ink);text-align:center}
 </style>
-<div id=conn></div>
+<div id=conn></div><div id=wm></div><button id=snd>🔊</button>
 <section id=s0 class=on><h2>🏎️ Kart Party !</h2><input id=name placeholder="Ton pseudo" maxlength=12 autocomplete=off><button id=go>Rejoindre</button><div id=st></div></section>
 <section id=s1>
  <canvas id=pv width=420 height=230></canvas>
@@ -55,22 +62,22 @@ button{background:#e53935;color:#fff;font-size:26px;box-shadow:3px 3px 0 var(--i
  <h3>Emblème — fond</h3><div class=sw id=bgs></div>
  <h3>Emblème — couleur du symbole</h3><div class=sw id=fgs></div>
  <div class=bar><button id=rdy>Prêt !</button><button id=start style="display:none;background:#43a047">▶ Lancer le championnat</button>
-  <button id=bots style="display:none;background:#5e35b1;font-size:20px"></button></div>
+  <button id=bots style="display:none;background:#5e35b1;font-size:20px"></button><button id=voice style="display:none;background:#00897b;font-size:20px"></button></div>
 </section>
 <section id=s2 style="align-items:center;justify-content:center;text-align:center"><h2 id=rt></h2><div class=big id=rb></div><div id=rs class=note style="font-size:20px"></div>
  <button id=nextb style="display:none;background:#43a047">▶ Continuer</button></section>
 <section id=pad>
-<div class="b pill" data-k=i style="left:2vw;top:4vh">🎁 Objet</div><div class="b pill" data-k=b style="left:2vw;top:17vh">Frein</div>
+<div class="b pill" data-k=h style="left:2vw;top:4vh;background:#ff9800">📯 Klaxon</div><div class="b pill" data-k=b style="left:2vw;top:17vh">Frein</div>
 <div class="b pill" data-k=i style="right:2vw;top:4vh">🎁 Objet</div><div class="b pill" data-k=g style="right:2vw;top:17vh;background:#2e7d32">Gaz</div>
 <div class=g style="left:18vw"><div class="b u" data-k=g>▲</div><div class="b d" data-k=b>▼</div><div class="b l" data-k=l>◀</div><div class="b r" data-k=r>▶</div></div>
 <div class=g style="left:82vw"><div class="b u" data-k=i style="background:#a89a00">🎁</div><div class="b d" data-k=g style="background:#2e7d32">A</div><div class="b l" data-k=i style="background:#1e88e5">🎁</div><div class="b r" data-k=b style="background:#c62828">B</div></div>
 <div id=info><div id=ipos></div><div id=islot></div><div id=ilap></div></div>
 <div id=rot>🔄 Tourne ton téléphone en paysage</div></section>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="shared.js"></script>
+<script src="shared.js"></script><script src="audio.js"></script>
 <script>
 const $=id=>document.getElementById(id),host=new URLSearchParams(location.search).get('host');
-const show=id=>document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id==id));
+const show=id=>{document.body.dataset.s=id;document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id==id))};
 const store=(k,v)=>{try{localStorage.setItem(k,typeof v=='string'?v:JSON.stringify(v))}catch(e){}},load=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 // Identifiant stable du téléphone : la TV le reconnaît à chaque reconnexion → pas de doublon
 const pid=load('kp-pid')||(()=>{const v='p'+Math.random().toString(36).slice(2,12)+Date.now().toString(36);store('kp-pid',v);return v})();
@@ -91,7 +98,7 @@ L($('shs'),SHAPES,(o,i)=>cfg.emb.sh==i,(o,i)=>cfg.emb.sh=i,(d,o,i)=>{d.style.css
 L($('syms'),SYMBOLS,s=>cfg.emb.s==s,s=>{cfg.emb.s=s;$('txt').value=''},(d,s)=>d.textContent=s);
 $('txt').oninput=()=>{const v=[...$('txt').value.trim().toUpperCase()].slice(0,2).join('');if(v){cfg.emb.s=v;changed()}};
 function changed(){cfg=cleanCfg(cfg);store('kp-cfg',cfg);ready=false;paint();sendCfg()}
-function paint(){lists.forEach(l=>l.sync());
+function paint(){lists.forEach(l=>l.sync());document.documentElement.style.setProperty('--kc',cfg.col);$('wm').style.backgroundImage=`url(${emblemURL(cfg.emb,256)})`;
  [...$('shs').children].forEach((b,i)=>{b.innerHTML='';const c=document.createElement('canvas');c.width=c.height=96;c.style.width=c.style.height='44px';drawEmblem(c,{...cfg.emb,sh:i});b.appendChild(c)});
  drawKart();$('rdy').textContent=ready?'✅ Prêt ! (annuler)':'Prêt !'}
 // Aperçu du kart vu de profil
@@ -111,7 +118,9 @@ function drawKart(){const c=$('pv'),x=c.getContext('2d'),S=c.width/420,ch=CHARS[
  F('#9e9e9e',()=>x.rect(-178,-6,24,12));x.restore()}
 $('rdy').onclick=()=>{ready=!ready;paint();sendCfg()};
 $('start').onclick=()=>tx({t:'start'});$('nextb').onclick=()=>tx({t:'next'});
-$('bots').onclick=()=>tx({t:'bots',v:$('bots').dataset.v!='1'});
+$('bots').onclick=()=>tx({t:'bots',v:$('bots').dataset.v!='1'});$('voice').onclick=()=>tx({t:'voice'});$('pv').onclick=()=>{SFX.init();horn()};
+// Son du téléphone : bouton 🔊/🔇 mémorisé
+const setSnd=v=>{SFX.setOn(v);store('kp-snd',v?'1':'0');$('snd').textContent=v?'🔊':'🔇'};setSnd(load('kp-snd')!='0');$('snd').onclick=()=>{SFX.init();setSnd(!SFX.isOn());if(SFX.isOn())SFX.lib.got()};
 paint();document.fonts&&document.fonts.ready.then(paint);
 
 // ---- Connexion robuste ----
@@ -152,6 +161,7 @@ addEventListener('pagehide',()=>{drop();peer&&peer.destroy()});
 function onData(m){if(!m||typeof m!='object')return;
  if(m.t=='phase'){lead=!!m.lead;const was=phase;phase=m.p;
   if(m.p=='lobby'){stopInputs();if(was&&was!='lobby')ready=false,sendCfg();show('s1');$('start').style.display=lead?'block':'none';
+   $('voice').style.display=lead?'block':'none';$('voice').textContent=m.voice=='voice'?'🎙️ Voix : vraie voix':'🎙️ Voix : blabla';
    $('bots').style.display=lead?'block':'none';$('bots').dataset.v=m.bots?'1':'0';$('bots').textContent=m.bots?'🤖 Bots : oui':'🤖 Bots : non';paint()}
   else if(m.p=='race'){show('pad');if(was!='race'){navigator.vibrate&&navigator.vibrate(200);$('ipos').textContent='';$('islot').textContent='';$('ilap').textContent=m.track}startInputs()}
   else{stopInputs();show('s2');const last=m.p=='podium';
@@ -160,7 +170,8 @@ function onData(m){if(!m||typeof m!='object')return;
    $('rs').innerHTML=last?`${m.pts} points au total`:`+${m.gain} pts — total ${m.pts} pts<br>Classement général : ${ord(m.rank)}/${m.n}`;
    $('nextb').style.display=lead?'block':'none';$('nextb').textContent=last?'▶ Retour au garage':m.race+1>=m.nr?'🏆 Voir le podium':'▶ Course suivante'}}
  else if(m.t=='st'){$('ipos').innerHTML=m.fin?'🏁':m.rk+(m.rk==1?'<sup>er</sup>':'<sup>e</sup>');$('islot').textContent=m.it||'';$('islot').style.opacity=m.it?1:.4;$('ilap').textContent=m.fin?ord(m.fin)+' !':`Tour ${m.lap}/${m.laps}`}
- else if(m.t=='fx'){const v={hit:[80,40,160],box:30,boost:[40,30,40],fin:[100,60,100,60,300]}[m.k];navigator.vibrate&&v&&navigator.vibrate(v)}
+ else if(m.t=='fx'){const H=[80,40,160],v={hit:H,boom:[150,50,250],slip:H,oil:H,bonk:60,roll:30,boost:[40,30,40],block:40,fin:[100,60,100,60,300]}[m.k];navigator.vibrate&&v&&navigator.vibrate(v);
+  const L=SFX.lib;if(m.k=='use'){L[m.x]&&L[m.x]()}else if(m.k=='fin')L.fin(m.x);else if(L[m.k])L[m.k]()}
  else if(m.t=='replaced'){stopped=true;drop();stopInputs();banner('');show('s0');$('st').textContent='Ce téléphone s’est connecté ailleurs (autre onglet ?). Appuie sur Rejoindre pour reprendre ici.'}
  else if(m.t=='full'){stopped=true;drop();banner('');show('s0');$('st').textContent=m.why||'Partie pleine.'}}
 
@@ -168,7 +179,8 @@ function onData(m){if(!m||typeof m!='object')return;
 const K={l:0,r:0,g:0,b:0,i:0,s:0};
 function startInputs(){if(inT)return;inT=setInterval(()=>{K.s+=Math.max(-.25,Math.min(.25,K.r-K.l-K.s));tx({t:'in',v:{s:K.s,g:K.g,b:K.b,i:K.i}})},33)}
 function stopInputs(){clearInterval(inT);inT=0}
-document.querySelectorAll('.b').forEach(b=>{const k=b.dataset.k,set=v=>{K[k]=v;b.classList.toggle('dn',!!v);if(v&&k=='i')navigator.vibrate&&navigator.vibrate(40)};
+let hornT=0;const horn=()=>{const t=Date.now();if(t-hornT<700)return;hornT=t;SFX.horns[cfg.ka%SFX.horns.length]();tx({t:'horn'})};
+document.querySelectorAll('.b').forEach(b=>{const k=b.dataset.k,set=v=>{K[k]=v;b.classList.toggle('dn',!!v);if(v&&k=='i')navigator.vibrate&&navigator.vibrate(40);if(v&&k=='h')horn()};
  b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);set(1)});
  ['pointerup','pointercancel','lostpointercapture'].forEach(t=>b.addEventListener(t,()=>set(0)))});
 document.addEventListener('contextmenu',e=>e.preventDefault());
