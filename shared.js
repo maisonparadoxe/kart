@@ -9,12 +9,15 @@ const LAPS=3,POINTS=[15,12,10,8,6,4];
 const DEFAULT_CFG={ch:0,ka:0,col:'#e53935',emb:{sh:0,bg:'#fdd835',fg:'#212121',s:'⚡'}};
 const hex=c=>'#'+c.toString(16).padStart(6,'0');
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// Pseudo amusant généré quand le joueur n'en saisit pas
+const NAMES_A=['Turbo','Bolide','Zigzag','Fusée','Ninja','Pirate','Comète','Tornade','Pépite','Castor'];
+const randomName=()=>NAMES_A[Math.floor(Math.random()*NAMES_A.length)]+Math.floor(10+Math.random()*90);
 const ord=n=>n==1?'1er':n+'e';
 const isCol=c=>/^#[0-9a-f]{6}$/i.test(c);
 // Nettoie une config reçue du réseau (jamais de confiance aveugle)
 function cleanCfg(c){c=c||{};const e=c.emb||{};
  return{ch:Math.abs(c.ch|0)%CHARS.length,ka:Math.abs(c.ka|0)%KARTS.length,col:isCol(c.col)?c.col:DEFAULT_CFG.col,
-  emb:{sh:Math.abs(e.sh|0)%SHAPES.length,bg:isCol(e.bg)?e.bg:DEFAULT_CFG.emb.bg,fg:isCol(e.fg)?e.fg:DEFAULT_CFG.emb.fg,s:[...String(e.s??'⚡')].slice(0,2).join('')}}}
+  emb:{sh:Math.abs(e.sh|0)%SHAPES.length,bg:isCol(e.bg)?e.bg:DEFAULT_CFG.emb.bg,fg:isCol(e.fg)?e.fg:DEFAULT_CFG.emb.fg,s:[...String(e.s==null?'⚡':e.s)].slice(0,2).join('')}}}
 
 // Trace la forme d'un emblème centrée en (0,0), rayon ~1
 function embPath(x,sh){x.beginPath();

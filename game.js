@@ -30,24 +30,26 @@ function openPeer(){peer=new Peer(hostId);
  peer.on('error',e=>{
   if(e.type=='unavailable-id'){peer.destroy();if(++idTries>3)hostId='kart-'+Math.random().toString(36).slice(2,8);setTimeout(openPeer,2500);return}
   if(e.type=='peer-unavailable')return;netMsg('Souci réseau ('+e.type+'), on réessaie…')});
- peer.on('connection',c=>{c.on('data',m=>onMsg(c,m));c.on('close',()=>onClose(c));c.on('error',()=>onClose(c))})}
+ peer.on('connection',c=>{toast('📱 Un téléphone se connecte…');c.on('data',m=>onMsg(c,m));c.on('close',()=>onClose(c));c.on('error',()=>onClose(c))})}
 // Chien de garde : reconnecte au serveur de signalisation si besoin
 setInterval(()=>{if(peer&&!peer.destroyed&&peer.disconnected)try{peer.reconnect()}catch(e){}},4000);
 function showQR(id){const u=new URL('controller.html?host='+id,location.href).href;const q=qrcode(0,'M');q.addData(u);q.make();$('qr').innerHTML=q.createImgTag(8,0);$('url').textContent=u}
+let toastT;function toast(t){const e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(toastT);toastT=setTimeout(()=>e.style.display='none',3000)}
 function netMsg(t){$('net').textContent=t;$('net').style.display=t?'block':'none'}
 const closeQuiet=c=>{if(!c)return;try{c.close()}catch(e){}};
 function reject(c,why){try{c.send({t:'full',why})}catch(e){}setTimeout(()=>closeQuiet(c),500)}
 
 function onMsg(c,m){if(!m||typeof m!='object')return;let p=players.find(p=>p.conn===c);const t=now();
  if(m.t=='hello'){
-  const pid=String(m.pid||'').slice(0,40),name=String(m.name||'Joueur').trim().slice(0,12)||'Joueur';
+  const pid=String(m.pid||'').slice(0,40);let name=String(m.name||'').trim().slice(0,12)||randomName();
   // Même téléphone (même pid) → on reprend sa place ; sinon même pseudo hors ligne (autre navigateur du même téléphone)
   p=players.find(q=>pid&&q.pid===pid)||players.find(q=>q.off&&!q.key&&q.name==name);
   if(p){if(p.conn&&p.conn!==c){send(p,{t:'replaced'});const o=p.conn;p.conn=null;setTimeout(()=>closeQuiet(o),300)}p.pid=pid}
   else{if(phase!='lobby')return reject(c,'Championnat en cours ! Tu pourras rejoindre à la fin.');
    if(players.filter(q=>!q.key).length+players.filter(q=>q.key).length>=4)return reject(c,'Partie pleine (4 joueurs max).');
-   p={pid,name,cfg:cleanCfg(m.cfg),ready:false,in:ZERO,pts:0};players.push(p)}
+   p={pid,name,cfg:cleanCfg(m.cfg),ready:false,in:ZERO,pts:0};players.push(p);toast('🏎️ '+name+' a rejoint !')}
   p.conn=c;p.off=false;p.seen=t;
+  if(players.some(q=>q!==p&&q.name==name))name=name.slice(0,10)+(players.length+1);
   if(phase=='lobby'){p.name=name;p.cfg=cleanCfg(m.cfg);p.ready=!!m.ready}
   sendPhase(p);lobby();return}
  if(!p)return;p.seen=t;

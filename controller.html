@@ -1,4 +1,5 @@
 <!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover"><title>Manette</title>
+<script>window.onerror=function(m,u,l){var e=document.getElementById("st");if(e)e.textContent="Erreur : "+m+" ("+String(u).split("/").pop()+":"+l+")"};</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
@@ -43,7 +44,7 @@ button{background:#e53935;color:#fff;font-size:26px;box-shadow:3px 3px 0 var(--i
 .big{font-size:64px;color:var(--y);-webkit-text-stroke:2px var(--ink);text-shadow:3px 3px 0 var(--ink);text-align:center}
 </style>
 <div id=conn></div>
-<section id=s0 class=on><h2>🏎️ Kart Party !</h2><input id=name placeholder="Ton pseudo" maxlength=12><button id=go>Rejoindre</button><div id=st></div></section>
+<section id=s0 class=on><h2>🏎️ Kart Party !</h2><input id=name placeholder="Ton pseudo" maxlength=12 autocomplete=off><button id=go>Rejoindre</button><div id=st></div></section>
 <section id=s1>
  <canvas id=pv width=420 height=230></canvas>
  <h3>Pilote</h3><div class=row id=chs></div>
@@ -74,6 +75,7 @@ const store=(k,v)=>{try{localStorage.setItem(k,typeof v=='string'?v:JSON.stringi
 // Identifiant stable du téléphone : la TV le reconnaît à chaque reconnexion → pas de doublon
 const pid=load('kp-pid')||(()=>{const v='p'+Math.random().toString(36).slice(2,12)+Date.now().toString(36);store('kp-pid',v);return v})();
 let cfg=cleanCfg((()=>{try{return JSON.parse(load('kp-cfg'))}catch(e){}})()||DEFAULT_CFG),name=load('kp-name')||'',ready=false,phase='',lead=false;
+if(!name){name=randomName();store('kp-name',name)}
 $('name').value=name;
 
 // ---- Garage : perso, kart, couleur, emblème ----
@@ -118,17 +120,20 @@ const tx=m=>{if(conn&&conn.open)try{conn.send(m)}catch(e){}};
 const sendCfg=()=>tx({t:'cfg',cfg,ready,name});
 const banner=t=>{$('conn').textContent=t;$('conn').style.display=t?'block':'none'};
 function connect(){if(stopped)return;clearTimeout(retryT);retryT=0;
- if(!peer||peer.destroyed){peer=new Peer();peer.on('open',dial);peer.on('error',peerErr);return}
+ if(!peer||peer.destroyed){step('Connexion au serveur…');peer=new Peer();peer.on('open',dial);peer.on('error',peerErr);return}
  if(peer.disconnected){try{peer.reconnect()}catch(e){peer.destroy();peer=null;retry()}return}  // 'open' relancera dial()
  if(peer.open)dial()}
 function dial(){if(stopped||(conn&&conn.open))return;drop();
  const c=peer.connect(host,{reliable:true});conn=c;
- const to=setTimeout(()=>{if(conn===c&&!c.open){drop();retry()}},8000);
+ step('Connexion à la TV…');
+ const to=setTimeout(()=>{if(conn===c&&!c.open){drop();step('La TV ne répond pas…');retry()}},8000);
  c.on('open',()=>{clearTimeout(to);if(conn!==c)return;tries=0;lastRx=Date.now();banner('');c.send({t:'hello',pid,name,cfg,ready})});
  c.on('data',m=>{if(conn!==c)return;lastRx=Date.now();onData(m)});
  c.on('close',()=>{if(conn===c){conn=null;lost()}});c.on('error',()=>{if(conn===c){drop();lost()}})}
 function drop(){const c=conn;conn=null;if(c)try{c.close()}catch(e){}}
 function lost(){stopInputs();if(stopped)return;banner('📡 Connexion perdue… reconnexion');retry()}
+// Pendant la première connexion, on affiche chaque étape sur l'écran d'accueil pour savoir où ça bloque
+function step(t){if(phase=='')$('st').textContent=t+(tries?` (essai ${tries+1})`:'')+(tries>=3?' — vérifie que le téléphone est sur le même wifi que la TV, ou recharge la page de la TV.':'')}
 function retry(){if(stopped||retryT)return;const d=Math.min(8000,700*2**tries++);retryT=setTimeout(()=>{retryT=0;connect()},d)}
 function peerErr(e){if(stopped)return;
  if(e.type=='peer-unavailable'){drop();banner('📺 TV introuvable… nouvel essai');if(phase=='')$('st').textContent='TV introuvable : vérifie que la page de la TV est ouverte.';retry();return}
@@ -172,7 +177,7 @@ $('go').onclick=()=>{
  try{document.documentElement.requestFullscreen().then(()=>screen.orientation.lock('landscape')).catch(()=>{})}catch(e){}
  if(!host){$('st').textContent='Lien invalide : scanne le QR code de la TV.';return}
  if(typeof Peer!='function'){$('st').textContent='Impossible de charger le module réseau. Vérifie ta connexion.';return}
- name=$('name').value.trim()||'Joueur';store('kp-name',name);$('st').textContent='Connexion…';
+ name=$('name').value.trim();if(!name){name=randomName();$('name').value=name}store('kp-name',name);$('st').textContent='Connexion…';
  stopped=false;tries=0;phase='';wake();drop();connect()};
 // Reprise automatique : si ce téléphone a déjà rejoint cette TV, on se reconnecte sans repasser par l'écran d'accueil
 if(host&&load('kp-last')==host&&name)setTimeout(()=>$('go').onclick(),50);
