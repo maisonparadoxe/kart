@@ -1,0 +1,61 @@
+<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover"><title>Manette</title>
+<style>
+*{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#1b1b2f;color:#fff;font-family:system-ui,sans-serif;overflow:hidden;touch-action:none}
+section{display:none;height:100%;padding:16px;flex-direction:column;gap:12px;overflow:auto}
+section.on{display:flex}
+input,button{font:inherit;font-size:20px;padding:14px;border-radius:12px;border:0}
+button{background:#e53935;color:#fff;font-weight:bold}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.opt{flex:1 1 40%;padding:12px;border-radius:12px;background:#333;border:3px solid transparent;text-align:center}
+.opt.sel{border-color:#fff;background:#555}
+#pad{position:relative;padding:0;background:#1a1a1a}
+#pad.on{display:block}
+.b{position:absolute;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#555;font-weight:bold;touch-action:none;width:15vh;height:15vh;font-size:6vh;color:#fff;border:.4vh solid #777}
+.b.pill{border-radius:3vh;width:24vh;height:11vh;font-size:5vh}
+.b.dn{filter:brightness(2)}
+.g{position:absolute;width:0;height:0;top:60vh}
+.u{left:-7.5vh;top:-22.5vh}.d{left:-7.5vh;top:7.5vh}.l{left:-22.5vh;top:-7.5vh}.r{left:7.5vh;top:-7.5vh}
+.hint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);opacity:.4;text-align:center;font-size:3vh;pointer-events:none}
+</style>
+<section id=s0 class=on><h2>🏎️ Kart Party</h2><input id=name placeholder="Ton pseudo" maxlength=12><button id=go>Rejoindre</button><div id=st></div></section>
+<section id=s1><h3 style="margin:0">Perso</h3><div class=row id=chs></div><h3 style="margin:0">Kart</h3><div class=row id=kas></div>
+<button id=rdy>Prêt !</button><button id=start style="display:none;background:#43a047">▶ Lancer la course</button></section>
+<section id=pad>
+<div class="b pill" data-k=i style="left:2vw;top:4vh">LB 🚀</div><div class="b pill" data-k=b style="left:2vw;top:17vh">LT frein</div>
+<div class="b pill" data-k=i style="right:2vw;top:4vh">RB 🚀</div><div class="b pill" data-k=g style="right:2vw;top:17vh;background:#2e7d32">RT gaz</div>
+<div class=g style="left:18vw"><div class="b u" data-k=g>▲</div><div class="b d" data-k=b>▼</div><div class="b l" data-k=l>◀</div><div class="b r" data-k=r>▶</div></div>
+<div class=g style="left:82vw"><div class="b u" data-k=i style="background:#a89a00">Y</div><div class="b d" data-k=g style="background:#2e7d32">A</div><div class="b l" data-k=i style="background:#1e88e5">X</div><div class="b r" data-k=b style="background:#c62828">B</div></div>
+<div class=hint>Tourne ton téléphone en paysage</div></section>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="shared.js"></script>
+<script>
+const $=id=>document.getElementById(id),host=new URLSearchParams(location.search).get('host');
+const show=id=>document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id==id));
+let conn,ch=0,ka=0,ready=false,timer;const K={l:0,r:0,g:0,b:0,i:0,s:0};
+$('name').value=localStorage.getItem('kp-name')||'';
+const mk=(el,arr,sel,f)=>arr.forEach((o,i)=>{const d=document.createElement('div');d.className='opt';d.innerHTML=f(o);d.onclick=()=>{sel(i);[...el.children].forEach((c,j)=>c.classList.toggle('sel',j==i));ready=false;send()};el.appendChild(d)});
+mk($('chs'),CHARS,i=>ch=i,c=>`<span style="font-size:32px">${c.e}</span><br>${c.n}`);
+mk($('kas'),KARTS,i=>ka=i,k=>`${k.n}<br><small>Vit ${'▮'.repeat(Math.round(k.spd/8))} Acc ${'▮'.repeat(Math.round(k.acc*2))}</small>`);
+$('chs').children[0].classList.add('sel');$('kas').children[0].classList.add('sel');
+function send(){$('rdy').textContent=ready?'✅ Prêt (annuler)':'Prêt !';conn&&conn.open&&conn.send({t:'pick',ch,ka,ready})}
+$('rdy').onclick=()=>{ready=!ready;send()};
+$('start').onclick=()=>conn.send({t:'start'});
+$('go').onclick=()=>{
+ try{document.documentElement.requestFullscreen().then(()=>screen.orientation.lock('landscape')).catch(()=>{})}catch(e){}
+ if(!host){$('st').textContent='Lien invalide : scanne le QR code de la TV.';return}
+ const name=$('name').value.trim()||'Joueur';localStorage.setItem('kp-name',name);$('st').textContent='Connexion…';
+ const peer=new Peer();peer.on('error',e=>$('st').textContent='Erreur : '+e.type);
+ peer.on('open',()=>{conn=peer.connect(host);
+  conn.on('open',()=>{conn.send({t:'join',name});send();show('s1')});
+  conn.on('data',m=>{
+   if(m.t=='lobby')$('start').style.display=m.host?'block':'none';
+   if(m.t=='full'){show('s0');$('st').textContent='Partie pleine ou déjà lancée.'}
+   if(m.t=='phase'){if(m.p=='race'){show('pad');navigator.vibrate&&navigator.vibrate(200);clearInterval(timer);timer=setInterval(()=>{K.s+=Math.max(-.25,Math.min(.25,K.r-K.l-K.s));conn.send({t:'in',v:{s:K.s,g:K.g,b:K.b,i:K.i}})},33)}
+    else{clearInterval(timer);ready=false;send();show('s1')}}});
+  conn.on('close',()=>{clearInterval(timer);show('s0');$('st').textContent='Déconnecté de la TV.'})})};
+document.querySelectorAll('.b').forEach(b=>{const k=b.dataset.k,set=v=>{K[k]=v;b.classList.toggle('dn',v);if(v&&k=='i')navigator.vibrate&&navigator.vibrate(50)};
+ b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);set(1)});
+ ['pointerup','pointercancel'].forEach(t=>b.addEventListener(t,()=>set(0)))});
+document.addEventListener('contextmenu',e=>e.preventDefault());
+</script>

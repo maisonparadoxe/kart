@@ -1,0 +1,136 @@
+<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kart Party</title>
+<style>
+html,body{margin:0;height:100%;background:#111;color:#fff;font-family:system-ui,sans-serif;overflow:hidden}
+canvas{position:fixed;inset:0;display:block}
+#ui{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2vh;text-align:center;background:rgba(0,0,0,.55)}
+#ui.hide{display:none}
+h1{font-size:6vh;margin:0}
+#qr{background:#fff;padding:1.5vh;border-radius:1vh}#qr img{width:30vh;height:30vh;display:block}
+#pl{display:flex;gap:2vw;flex-wrap:wrap;justify-content:center}
+.card{padding:1.5vh 2vw;border-radius:1.5vh;font-size:3vh;background:#333;border:.5vh solid}
+#msg{font-size:2.6vh}
+.hud{position:fixed;font-size:3vh;font-weight:bold;text-shadow:0 0 6px #000;padding:1vh;pointer-events:none}
+#big{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-size:20vh;font-weight:bold;text-shadow:0 0 20px #000;pointer-events:none}
+</style>
+<div id=ui><h1>🏎️ Kart Party</h1><div id=qr></div><div id=url style="font-size:1.6vh;opacity:.6"></div><div>Scanne le QR code avec ton téléphone</div><div id=pl></div><div id=msg></div></div>
+<div id=big></div><div id=huds></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="shared.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const R=new THREE.WebGLRenderer({antialias:true});R.setSize(innerWidth,innerHeight);R.setPixelRatio(Math.min(devicePixelRatio,1.5));document.body.prepend(R.domElement);
+addEventListener('resize',()=>R.setSize(innerWidth,innerHeight));
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x87ceeb);scene.fog=new THREE.Fog(0x87ceeb,80,320);
+scene.add(new THREE.HemisphereLight(0xffffff,0x446644,1.1));
+const sun=new THREE.DirectionalLight(0xffffff,.6);sun.position.set(50,100,30);scene.add(sun);
+
+// ---- Circuit ----
+const N=240,W=9;
+const P=t=>[130*Math.cos(t)+20*Math.cos(3*t),85*Math.sin(t)+15*Math.sin(2*t)];
+const C=[];for(let i=0;i<N;i++)C.push(P(i/N*Math.PI*2));
+{const v=[],col=[],idx=[];
+ for(let i=0;i<N;i++){const a=C[i],b=C[(i+1)%N];let dx=b[0]-a[0],dz=b[1]-a[1];const l=Math.hypot(dx,dz);dx/=l;dz/=l;
+  const k=v.length/3,c=(i>>2)%2?[.35,.35,.38]:[.45,.45,.5];
+  v.push(a[0]-dz*W,.05,a[1]+dx*W,a[0]+dz*W,.05,a[1]-dx*W,b[0]-dz*W,.05,b[1]+dx*W,b[0]+dz*W,.05,b[1]-dx*W);
+  for(let j=0;j<4;j++)col.push(...c);idx.push(k,k+1,k+2,k+1,k+3,k+2)}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(v,3));g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));g.setIndex(idx);
+ scene.add(new THREE.Mesh(g,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.DoubleSide})))}
+const gnd=new THREE.Mesh(new THREE.PlaneGeometry(1500,1500),new THREE.MeshLambertMaterial({color:0x4caf50}));gnd.rotation.x=-Math.PI/2;scene.add(gnd);
+const h0=Math.atan2(C[1][0]-C[0][0],C[1][1]-C[0][1]);
+const sl=new THREE.Mesh(new THREE.PlaneGeometry(W*2,2),new THREE.MeshBasicMaterial({color:0xffffff}));sl.rotation.order='YXZ';sl.rotation.set(-Math.PI/2,h0,0);sl.position.set(C[0][0],.08,C[0][1]);scene.add(sl);
+const tm=new THREE.MeshLambertMaterial({color:0x2e7d32});
+for(let k=0;k<80;k++){const x=(Math.random()-.5)*520,z=(Math.random()-.5)*420;let m=1e9;for(const c of C)m=Math.min(m,Math.hypot(c[0]-x,c[1]-z));if(m<W*3)continue;const t=new THREE.Mesh(new THREE.ConeGeometry(3,9,8),tm);t.position.set(x,4.5,z);scene.add(t)}
+
+// ---- Karts ----
+function mkKart(ch,ka){const g=new THREE.Group(),col=CHARS[ch].c,M=c=>new THREE.MeshLambertMaterial({color:c});
+ const b=new THREE.Mesh(new THREE.BoxGeometry(2,.7,3.2),M(col));b.position.y=.8;if(ka==2)b.scale.set(1.15,1,.9);g.add(b);
+ const hd=new THREE.Mesh(new THREE.SphereGeometry(.7,12,10),M(0xffe0bd));hd.position.set(0,1.9,-.2);g.add(hd);
+ const cap=new THREE.Mesh(new THREE.ConeGeometry(.6,.7,12),M(col));cap.position.set(0,2.6,-.2);g.add(cap);
+ const wm=M(0x222222);
+ for(const[x,z]of[[-1.2,1.1],[1.2,1.1],[-1.2,-1.1],[1.2,-1.1]]){const w=new THREE.Mesh(new THREE.CylinderGeometry(.5,.5,.5,12),wm);w.rotation.z=Math.PI/2;w.position.set(x,.5,z);g.add(w)}
+ if(ka==1){const f=new THREE.Mesh(new THREE.BoxGeometry(2.6,.1,.6),wm);f.position.set(0,1.6,-1.7);g.add(f)}
+ return g}
+
+// ---- Réseau ----
+const players=[];let phase='lobby',t0=0,first=0,fin=0;
+const bc=m=>players.forEach(p=>p.conn&&p.conn.send(m));
+const id='kart-'+Math.random().toString(36).slice(2,8);
+const peer=new Peer(id);
+peer.on('open',()=>{const u=new URL('controller.html?host='+id,location.href).href;const q=qrcode(0,'M');q.addData(u);q.make();$('qr').innerHTML=q.createImgTag(8,0);$('url').textContent=u;lobby()});
+peer.on('error',e=>$('msg').textContent='Erreur réseau : '+e.type);
+peer.on('connection',c=>{
+ c.on('data',m=>onMsg(c,m));
+ c.on('close',()=>{const p=players.find(p=>p.conn===c);if(!p)return;if(phase=='lobby'){players.splice(players.indexOf(p),1);lobby()}else p.in={s:0,g:0,b:1,i:0}})});
+function onMsg(c,m){let p=players.find(p=>p.conn===c);
+ if(m.t=='join'){if(p)return;if(players.length>=4||phase!='lobby'){c.send({t:'full'});return}
+  players.push({conn:c,name:String(m.name||'Joueur').slice(0,12),ch:0,ka:0,ready:false,in:{s:0,g:0,b:0,i:0}});lobby()}
+ else if(!p)return;
+ else if(m.t=='pick'){p.ch=m.ch|0;p.ka=m.ka|0;p.ready=!!m.ready;lobby()}
+ else if(m.t=='in')p.in=m.v;
+ else if(m.t=='start'&&p===players[0])tryStart()}
+
+function lobby(){
+ $('pl').innerHTML=players.map(p=>`<div class=card style="border-color:${hex(CHARS[p.ch].c)}">${CHARS[p.ch].e} ${esc(p.name)}<br><small>${KARTS[p.ka].n} ${p.ready?'✅':'…'}</small></div>`).join('');
+ const ok=players.length&&players.every(p=>p.ready);
+ $('msg').textContent=ok?'Tous prêts ! Le joueur 1 lance la course (ou Entrée / OK sur la TV)':players.length?'En attente des joueurs…':'Test sans téléphone : touche K = joueur clavier (flèches + espace)';
+ players.forEach((p,i)=>p.conn&&p.conn.send({t:'lobby',host:i==0}))}
+function tryStart(){if(phase=='lobby'&&players.length&&players.every(p=>p.ready))start()}
+
+// ---- Partie ----
+function nearest(p){let best=1e9,bi=0;for(let i=0;i<N;i++){const d=(C[i][0]-p.pos[0])**2+(C[i][1]-p.pos[1])**2;if(d<best){best=d;bi=i}}return[Math.sqrt(best),bi]}
+const cols=()=>players.length>1?2:1,rows=()=>players.length>2?2:1;
+function start(){phase='race';first=0;fin=0;$('ui').classList.add('hide');$('huds').innerHTML='';
+ players.forEach((p,k)=>{const fx=Math.sin(h0),fz=Math.cos(h0),a=C[0],lat=(k%2?1:-1)*3,bk=6+Math.floor(k/2)*7;
+  p.h=h0;p.pos=[a[0]-fz*lat-fx*bk,a[1]+fx*lat-fz*bk];p.v=0;p.lap=0;p.fin=0;p.boost=0;p.cd=0;p.idx=nearest(p)[1];
+  p.mesh=mkKart(p.ch,p.ka);scene.add(p.mesh);
+  const h=document.createElement('div');h.className='hud';h.style.left=(k%cols())*100/cols()+'%';h.style.top=Math.floor(k/cols())*100/rows()+'%';$('huds').appendChild(h);p.hud=h});
+ t0=performance.now()+3000;bc({t:'phase',p:'race'})}
+const prog=p=>p.fin?1e9-p.fin:p.lap*N+p.idx;
+const rank=p=>players.filter(q=>prog(q)>prog(p)).length+1;
+const keys={};
+function step(dt,now){
+ const left=(t0-now)/1000,go=left<=0;$('big').textContent=left>0?Math.ceil(left):left>-.8?'GO !':'';
+ for(const p of players){
+  if(p.key)p.in={s:(keys.ArrowRight?1:0)-(keys.ArrowLeft?1:0),g:keys.ArrowUp?1:0,b:keys.ArrowDown?1:0,i:keys.Space?1:0};
+  const ka=KARTS[p.ka],inp=go&&!p.fin?p.in:{s:0,g:0,b:0,i:0};
+  p.cd=Math.max(0,p.cd-dt);p.boost=Math.max(0,p.boost-dt);
+  if(inp.i&&p.cd==0){p.boost=1.2;p.cd=5}
+  const[d,i]=nearest(p),off=d>W;
+  const max=ka.spd*(off?.45:1)*(p.boost>0?1.5:1);
+  const target=inp.g?max:inp.b?-max*.3:0;
+  p.v+=(target-p.v)*Math.min(1,(p.boost>0?4:ka.acc)*dt*(inp.g||inp.b?1:.6));
+  if(p.v>max)p.v+=(max-p.v)*Math.min(1,3*dt);
+  p.h-=inp.s*ka.han*dt*Math.max(-1,Math.min(1,p.v/12));
+  p.pos[0]+=Math.sin(p.h)*p.v*dt;p.pos[1]+=Math.cos(p.h)*p.v*dt;
+  if(d>W*2.2){const c=C[i],k=(d-W*2.2)/d;p.pos[0]+=(c[0]-p.pos[0])*k;p.pos[1]+=(c[1]-p.pos[1])*k;p.v*=.9}
+  if(p.idx>N*.8&&i<N*.2)p.lap++;else if(p.idx<N*.2&&i>N*.8)p.lap--;
+  p.idx=i;
+  if(p.lap>3&&!p.fin){p.fin=++fin;if(!first)first=now}
+  p.mesh.position.set(p.pos[0],0,p.pos[1]);p.mesh.rotation.y=p.h;p.mesh.rotation.z=-inp.s*.08*Math.min(1,p.v/20);
+  p.hud.textContent=`${p.name} · ${p.fin?'🏁 Terminé !':'Tour '+Math.min(Math.max(p.lap,1),3)+'/3'} · ${rank(p)}/${players.length}${p.cd==0?' · 🚀':''}`}
+ if(players.every(p=>p.fin)||(first&&now-first>20000))end()}
+function end(){phase='end';const o=[...players].sort((a,b)=>prog(b)-prog(a));
+ $('pl').innerHTML=o.map((p,i)=>`<div class=card style="border-color:${hex(CHARS[p.ch].c)}">${i+1}. ${CHARS[p.ch].e} ${esc(p.name)}</div>`).join('');
+ $('msg').textContent='Entrée / OK pour rejouer';$('ui').classList.remove('hide');$('big').textContent=''}
+function back(){phase='lobby';players.forEach(p=>{scene.remove(p.mesh);p.ready=!!p.key});$('huds').innerHTML='';bc({t:'phase',p:'lobby'});lobby()}
+addEventListener('keydown',e=>{keys[e.code]=1;if(e.code=='Enter'){phase=='lobby'?tryStart():phase=='end'&&back()}
+ if(e.code=='KeyK'&&phase=='lobby'&&players.length<4){players.push({conn:null,key:1,name:'Clavier',ch:players.length%4,ka:0,ready:true,in:{}});lobby()}
+ if(e.code.startsWith('Arrow')||e.code=='Space')e.preventDefault()});
+addEventListener('keyup',e=>keys[e.code]=0);
+addEventListener('click',()=>{phase=='lobby'?tryStart():phase=='end'&&back()});
+
+// ---- Rendu ----
+const cams=[0,1,2,3].map(()=>new THREE.PerspectiveCamera(70,1,.5,500));
+function render(now){
+ const Wd=innerWidth,H=innerHeight;R.setScissorTest(false);R.clear();R.setScissorTest(true);
+ const list=phase=='lobby'||!players.length?[null]:players,n=list.length,cs=n>1?2:1,rs=n>2?2:1;
+ list.forEach((p,k)=>{const w=Wd/cs,h=H/rs,x=(k%cs)*w,y=H-(Math.floor(k/cs)+1)*h,c=cams[k];
+  R.setViewport(x,y,w,h);R.setScissor(x,y,w,h);c.aspect=w/h;c.updateProjectionMatrix();
+  if(p){const fx=Math.sin(p.h),fz=Math.cos(p.h);c.position.set(p.pos[0]-fx*9,4.5,p.pos[1]-fz*9);c.lookAt(p.pos[0]+fx*5,1.5,p.pos[1]+fz*5)}
+  else{c.position.set(Math.cos(now/5000)*190,80,Math.sin(now/5000)*130);c.lookAt(0,0,0)}
+  R.render(scene,c)})}
+let last=performance.now();
+(function loop(now){requestAnimationFrame(loop);const dt=Math.min((now-last)/1000,.05);last=now;if(phase=='race')step(dt,now);render(now)})(last);
+</script>
