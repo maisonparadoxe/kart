@@ -169,7 +169,7 @@ function onData(m){if(!m||typeof m!='object')return;
    $('rb').textContent=last?(m.rank==1?'CHAMPION !':ord(m.rank)):ord(m.pos);
    $('rs').innerHTML=last?`${m.pts} points au total`:`+${m.gain} pts — total ${m.pts} pts<br>Classement général : ${ord(m.rank)}/${m.n}`;
    $('nextb').style.display=lead?'block':'none';$('nextb').textContent=last?'▶ Retour au garage':m.race+1>=m.nr?'🏆 Voir le podium':'▶ Course suivante'}}
- else if(m.t=='st'){$('ipos').innerHTML=m.fin?'🏁':m.rk+(m.rk==1?'<sup>er</sup>':'<sup>e</sup>');$('islot').textContent=m.it||'';$('islot').style.opacity=m.it?1:.4;$('ilap').textContent=m.fin?ord(m.fin)+' !':`Tour ${m.lap}/${m.laps}`}
+ else if(m.t=='st'){if(phase=='race'){SFX.engine.start(cfg.ka);SFX.engine.set(m.v||0,m.bo)}$('ipos').innerHTML=m.fin?'🏁':m.rk+(m.rk==1?'<sup>er</sup>':'<sup>e</sup>');$('islot').textContent=m.it||'';$('islot').style.opacity=m.it?1:.4;$('ilap').textContent=m.fin?ord(m.fin)+' !':`Tour ${m.lap}/${m.laps}`}
  else if(m.t=='fx'){const H=[80,40,160],v={hit:H,boom:[150,50,250],slip:H,oil:H,bonk:60,roll:30,boost:[40,30,40],block:40,fin:[100,60,100,60,300]}[m.k];navigator.vibrate&&v&&navigator.vibrate(v);
   const L=SFX.lib;if(m.k=='use'){L[m.x]&&L[m.x]()}else if(m.k=='fin')L.fin(m.x);else if(L[m.k])L[m.k]()}
  else if(m.t=='replaced'){stopped=true;drop();stopInputs();banner('');show('s0');$('st').textContent='Ce téléphone s’est connecté ailleurs (autre onglet ?). Appuie sur Rejoindre pour reprendre ici.'}
@@ -178,7 +178,7 @@ function onData(m){if(!m||typeof m!='object')return;
 // ---- Commandes ----
 const K={l:0,r:0,g:0,b:0,i:0,s:0};
 function startInputs(){if(inT)return;inT=setInterval(()=>{K.s+=Math.max(-.25,Math.min(.25,K.r-K.l-K.s));tx({t:'in',v:{s:K.s,g:K.g,b:K.b,i:K.i}})},33)}
-function stopInputs(){clearInterval(inT);inT=0}
+function stopInputs(){clearInterval(inT);inT=0;SFX.engine.stop()}
 let hornT=0;const horn=()=>{const t=Date.now();if(t-hornT<700)return;hornT=t;SFX.horns[cfg.ka%SFX.horns.length]();tx({t:'horn'})};
 document.querySelectorAll('.b').forEach(b=>{const k=b.dataset.k,set=v=>{K[k]=v;b.classList.toggle('dn',!!v);if(v&&k=='i')navigator.vibrate&&navigator.vibrate(40);if(v&&k=='h')horn()};
  b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);set(1)});

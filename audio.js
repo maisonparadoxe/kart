@@ -59,4 +59,13 @@ const SFX=(()=>{let ctx=null,master=null,musicBus=null,on=true,nbuf=null;
    if(i%2==1)noise(.04,Object.assign({v:.025,f:8000,type:'highpass',t:dt},b));
    mStep++;mNext+=TEMPO}}
  const music={play(){if(!mT){mT=setInterval(musicTick,100);mNext=0}},stop(){clearInterval(mT);mT=0}};
- return{init,lib,horns,blabla,music,ready,unlocked:()=>!!ctx&&ctx.state=='running',setOn:v=>{on=v},isOn:()=>on}})();
+ // Moteur : deux oscillateurs filtrés + petit « teuf-teuf », hauteur selon la vitesse. Volume volontairement discret.
+ let E=null;const engine={
+  start(ka){if(E||!ready())return;const base=[52,66,44][ka|0]||52,t=ctx.currentTime,o1=ctx.createOscillator(),o2=ctx.createOscillator(),f=ctx.createBiquadFilter(),g=ctx.createGain(),l=ctx.createOscillator(),lg=ctx.createGain();
+   o1.type='sawtooth';o2.type='square';f.type='lowpass';f.Q.value=3;g.gain.value=0;l.type='sine';lg.gain.value=.012;
+   o1.connect(f);o2.connect(f);f.connect(g);g.connect(master);l.connect(lg);lg.connect(g.gain);[o1,o2,l].forEach(o=>o.start(t));E={o1,o2,f,g,l,base};engine.set(0,0)},
+  set(sp,bo){if(!E)return;const t=ctx.currentTime,k=Math.min(1.3,sp/38),fr=E.base*(1+k*1.7)*(bo?1.18:1);
+   E.o1.frequency.setTargetAtTime(fr,t,.09);E.o2.frequency.setTargetAtTime(fr*.505,t,.09);E.l.frequency.setTargetAtTime(fr/4,t,.09);
+   E.f.frequency.setTargetAtTime(260+k*900+(bo?500:0),t,.1);E.g.gain.setTargetAtTime(.035+k*.035,t,.12)},
+  stop(){if(!E)return;const e=E,t=ctx.currentTime;E=null;e.g.gain.setTargetAtTime(0,t,.08);setTimeout(()=>{[e.o1,e.o2,e.l].forEach(o=>{try{o.stop()}catch(x){}});e.g.disconnect()},500)}};
+ return{init,lib,horns,blabla,music,engine,ready,unlocked:()=>!!ctx&&ctx.state=='running',setOn:v=>{on=v;if(!v)engine.stop()},isOn:()=>on}})();

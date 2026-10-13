@@ -101,7 +101,8 @@ function startRace(){loadTrack(race);clearRace();phase='race';fin=0;endAt=Infini
  racers.forEach((p,k)=>{const lat=(k%2?1:-1)*3.5,bk=6+Math.floor(k/2)*6;
   Object.assign(p,{h:H,pos:[a[0]-fz*lat-fx*bk,a[1]+fx*lat-fz*bk],v:0,lap:0,fin:0,finT:0,item:null,roll:0,boost:0,spin:0,spinA:0,shield:0,safe:0,maxLap:0,blockT:0,lastI:0,cool:{},aiUse:0,seed:Math.random()*99,cam:null});
   p.idx=nearest(TR,p.pos[0],p.pos[1])[1];p.mesh=mkKart(p.cfg);scene.add(p.mesh)});
- views=racers.filter(p=>!p.bot);
+ // Chaque joueur garde le même cadre d'écran pendant tout le championnat (ordre d'arrivée dans la partie)
+ views=players.filter(p=>racers.includes(p));
  $('huds').innerHTML='';const cs=views.length>1?2:1,rs=views.length>2?2:1;
  views.forEach((p,k)=>{const d=document.createElement('div');d.className='vp';
   Object.assign(d.style,{left:(k%cs)*100/cs+'%',top:Math.floor(k/cs)*100/rs+'%',width:100/cs+'%',height:100/rs+'%'});
@@ -234,7 +235,7 @@ function hud(t){const items=Object.values(ITEMS).map(i=>i.e);
  x.lineJoin='round';x.beginPath();TR.C.forEach(([u,v],i)=>i?x.lineTo(X(u),Y(v)):x.moveTo(X(u),Y(v)));x.closePath();
  x.lineWidth=11;x.strokeStyle='#111';x.stroke();x.lineWidth=6;x.strokeStyle='#fff';x.stroke();
  for(const p of[...racers].reverse()){x.beginPath();x.arc(X(p.pos[0]),Y(p.pos[1]),p.bot?5:7,0,7);x.fillStyle=p.cfg.col;x.fill();x.lineWidth=2.5;x.strokeStyle='#111';x.stroke()}}
-function sendStatus(){for(const p of views)if(!p.key)send(p,{t:'st',rk:rankOf(p),n:racers.length,lap:Math.min(Math.max(p.lap,1),LAPS),laps:LAPS,fin:p.fin,it:p.roll?'🎲':p.item?ITEMS[p.item].e:''})}
+function sendStatus(){for(const p of views)if(!p.key)send(p,{t:'st',rk:rankOf(p),n:racers.length,lap:Math.min(Math.max(p.lap,1),LAPS),laps:LAPS,fin:p.fin,it:p.roll?'🎲':p.item?ITEMS[p.item].e:'',v:Math.round(Math.max(0,p.v)),bo:p.boost>0?1:0})}
 
 // ---- Clavier / souris (TV) ----
 addEventListener('keydown',e=>{keys[e.code]=1;
@@ -260,7 +261,7 @@ function render(t,dt){const Wd=innerWidth,H=innerHeight;R.setScissorTest(false);
   c.updateProjectionMatrix();R.render(scene,c)})}
 let last=now();
 (function loop(t){requestAnimationFrame(loop);const dt=Math.min((t-last)/1000,.05);last=t;
- if(phase=='race'){step(dt,t);if(phase=='race'){animate(dt,t);if(t-hudT>100){hudT=t;hud(t)}if(t-stT>200){stT=t;sendStatus()}}}
+ if(phase=='race'){step(dt,t);if(phase=='race'){animate(dt,t);if(t-hudT>100){hudT=t;hud(t)}if(t-stT>120){stT=t;sendStatus()}}}
  else if(TR)for(const b of TR.boxes)b.m.rotation.y+=dt*1.5;
  $('mini').style.display=phase=='race'?'block':'none';
  render(t,dt)})(last);
