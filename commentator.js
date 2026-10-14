@@ -2,6 +2,7 @@
 // Pour rester drôle sans saouler : priorités, pause minimale entre deux phrases, pas de répétition,
 // les carambolages sont regroupés et on parle surtout des humains.
 const LINES={
+ shortcut:['{n} prend le raccourci !','{n} s’engouffre dans le passage secret !','{n} coupe par le raccourci, quel culot !','Raccourci pour {n} ! Pourvu qu’il passe les tonneaux.'],
  join:['Bienvenue {n} !','{n} entre dans l’arène !','Tiens, voilà {n} ! Joli emblème.','{n} est dans la place !'],
  start:['Bienvenue sur {track} ! Attachez vos casques !','{track} ! Les moteurs rugissent… enfin, ils toussent.','Ça va chauffer sur {track} !','Silence dans les tribunes… c’est parti pour {track} !'],
  final:['Dernière course ! {n} mène le championnat avec {pts} points !','Tout se joue maintenant ! {n} est en tête du championnat.','Dernière manche ! Qui va détrôner {n} ?'],
@@ -23,7 +24,7 @@ const LINES={
  champion:['{n} est champion ! Bravo à tous !','Et le grand champion est… {n} !','{n} soulève la coupe ! Quelle saison !']};
 const CMT=(()=>{let freeAt=0,lastEnd=-1e9,queue=[],recent=[],last={},hits=[],hitT=0,voice=null,tm=0;
  let mode=(()=>{try{return localStorage.getItem('kp-voice')||'blabla'}catch(e){return'blabla'}})();
- const COOL={lead:12000,bonk:20000,oil:8000,join:3000,block:8000,ram:10000},GAP=[6000,4500,1500,0],t=()=>performance.now();
+ const COOL={shortcut:14000,lead:12000,bonk:20000,oil:8000,join:3000,block:8000,ram:10000},GAP=[6000,4500,1500,0],t=()=>performance.now();
  const pickVoice=()=>{if(!window.speechSynthesis)return null;const v=speechSynthesis.getVoices().filter(v=>/^fr/i.test(v.lang));return v.find(v=>/google|natural|premium|enhanced/i.test(v.name))||v[0]||null};
  if(window.speechSynthesis){voice=pickVoice();speechSynthesis.onvoiceschanged=()=>{voice=pickVoice()}}
  const fill=(s,o)=>s.replace(/\{(\w)(\w*)\}/g,(_,a,b)=>o[a+b]!=null?o[a+b]:'');

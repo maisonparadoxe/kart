@@ -50,6 +50,8 @@ button{background:#e53935;color:#fff;font-size:26px;box-shadow:3px 3px 0 var(--i
 @media (orientation:portrait){#pad.on #rot{display:flex}}
 .big{font-size:64px;color:var(--y);-webkit-text-stroke:2px var(--ink);text-shadow:3px 3px 0 var(--ink);text-align:center}
 #cupb{background:#fff;color:var(--ink);font-family:system-ui,sans-serif;font-size:17px;text-align:left;box-shadow:3px 3px 0 var(--ink)}#cupb:disabled{opacity:1;color:#444}
+.cupcard{background:#fff;border:3px solid var(--ink);border-radius:12px;padding:10px 12px;font-size:15px;box-shadow:3px 3px 0 var(--ink);text-align:left}.cupcard.sel{background:var(--y);transform:rotate(-.6deg)}
+.cupcard b{font:normal 26px Bangers,Impact,system-ui,sans-serif;letter-spacing:.05em;margin-right:8px}.cupcard small{opacity:.7}.cupcard div{margin-top:4px;line-height:1.5}#cups{display:flex;flex-direction:column;gap:10px}
 .opt{position:relative}.bdg{position:absolute;top:-8px;right:-8px;background:#e53935;color:#fff;width:28px;height:28px;border-radius:50%;border:3px solid var(--ink);font:normal 18px/22px Bangers,Impact,sans-serif;text-align:center}
 </style>
 <div id=conn></div><div id=wm></div><button id=snd>🔊</button>
@@ -67,6 +69,7 @@ button{background:#e53935;color:#fff;font-size:26px;box-shadow:3px 3px 0 var(--i
  <div class=bar><button id=rdy>Prêt !</button><button id=start style="display:none;background:#43a047">▶ Lancer le championnat</button>
   <button id=bots style="display:none;background:#5e35b1;font-size:20px"></button><button id=voice style="display:none;background:#00897b;font-size:20px"></button></div>
 </section>
+<section id=s4><h2>🏆 Championnat</h2><div class=note>Touche une coupe pour la choisir</div><div id=cups></div><div class=bar><button id=cc4 style="background:#757575">Retour</button></div></section>
 <section id=s3><h2>🏆 3 circuits</h2><div class=note>Touche dans l'ordre : 1ère, 2e puis 3e course</div><div class=row id=trs></div>
  <div class=bar><button id=rnd style="background:#5e35b1">🎲 Au hasard</button><button id=okc style="background:#43a047">✔ Valider</button><button id=cnc style="background:#757575">Annuler</button></div></section>
 <section id=s2 style="align-items:center;justify-content:center;text-align:center"><h2 id=rt></h2><div class=big id=rb></div><div id=rs class=note style="font-size:20px"></div>
@@ -139,12 +142,17 @@ function drawKart(){const c=$('pv'),x=c.getContext('2d'),S=c.width/420,ch=CHARS[
 $('rdy').onclick=()=>{ready=!ready;paint();sendCfg()};
 $('start').onclick=()=>tx({t:'start'});$('nextb').onclick=()=>tx({t:'next'});
 let cup=DEFAULT_CUP.slice(),sel=[];
-const cupTxt=()=>'🏆 '+cup.map(i=>TRACK_META[i].e+' '+TRACK_META[i].n).join('  ›  ');
+const cupTxt=()=>'🏆 '+cupLabel(cup)+'  ·  '+cup.map(i=>TRACK_META[i].e).join(' ');
+function renderCups(){const el=$('cups');el.innerHTML='';
+ CUPS.forEach(c=>{const d=document.createElement('div');d.className='cupcard'+(cupLabel(cup)==c.e+' '+c.n?' sel':'');
+  d.innerHTML=`<b>${c.e} ${c.n}</b><small>${c.t.length} courses</small><div>${c.t.map(i=>TRACK_META[i].e+' '+TRACK_META[i].n).join('<br>')}</div>`;d.onclick=()=>{tx({t:'cup',v:c.t});show('s1')};el.appendChild(d)});
+ const d=document.createElement('div');d.className='cupcard'+(cupLabel(cup)=='✏️ Sur mesure'?' sel':'');d.innerHTML='<b>✏️ Sur mesure</b><small>3 circuits au choix</small><div>Compose ton propre championnat parmi tous les circuits.</div>';
+ d.onclick=()=>{sel=cup.slice(0,CUP_LEN);renderTr();show('s3')};el.appendChild(d)}
 function renderTr(){const el=$('trs');el.innerHTML='';TRACK_META.forEach((t,i)=>{const d=document.createElement('div'),k=sel.indexOf(i);d.className='opt'+(k>=0?' sel':'');
  d.innerHTML=`<span style="font-size:30px">${t.e}</span><b>${t.n}</b>`+(k>=0?`<i class=bdg>${k+1}</i>`:'');
  d.onclick=()=>{const q=sel.indexOf(i);if(q>=0)sel.splice(q,1);else{if(sel.length>=CUP_LEN)sel.shift();sel.push(i)}renderTr()};el.appendChild(d)});
  $('okc').disabled=sel.length!=CUP_LEN;$('okc').style.opacity=sel.length==CUP_LEN?1:.5}
-$('cupb').onclick=()=>{if(!lead)return;sel=cup.slice();renderTr();show('s3')};
+$('cupb').onclick=()=>{if(!lead)return;renderCups();show('s4')};$('cc4').onclick=()=>show('s1');
 $('rnd').onclick=()=>{sel=TRACK_META.map((_,i)=>i).sort(()=>Math.random()-.5).slice(0,CUP_LEN);renderTr()};
 $('okc').onclick=()=>{if(sel.length==CUP_LEN){tx({t:'cup',v:sel});show('s1')}};$('cnc').onclick=()=>show('s1');
 $('bots').onclick=()=>tx({t:'bots',v:$('bots').dataset.v!='1'});$('voice').onclick=()=>tx({t:'voice'});$('pv').onclick=()=>{SFX.init();horn()};
@@ -189,7 +197,7 @@ addEventListener('pagehide',()=>{drop();peer&&peer.destroy()});
 
 function onData(m){if(!m||typeof m!='object')return;
  if(m.t=='phase'){lead=!!m.lead;const was=phase;phase=m.p;
-  if(m.p=='lobby'){stopInputs();if(was&&was!='lobby')ready=false,sendCfg();if(document.body.dataset.s!='s3')show('s1');$('start').style.display=lead?'block':'none';
+  if(m.p=='lobby'){stopInputs();if(was&&was!='lobby')ready=false,sendCfg();if(!['s3','s4'].includes(document.body.dataset.s))show('s1');$('start').style.display=lead?'block':'none';
    if(m.cup){cup=m.cup;$('cupb').textContent=cupTxt()+(lead?'  ✏️':'');$('cupb').disabled=!lead}
    $('voice').style.display=lead?'block':'none';$('voice').textContent=m.voice=='voice'?'🎙️ Voix : vraie voix':'🎙️ Voix : blabla';
    $('bots').style.display=lead?'block':'none';$('bots').dataset.v=m.bots?'1':'0';$('bots').textContent=m.bots?'🤖 Bots : oui':'🤖 Bots : non';paint()}

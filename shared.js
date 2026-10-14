@@ -10,13 +10,17 @@ const ITEMS={banana:{e:'🍌',n:'Banane'},bomb:{e:'💣',n:'Bombe'},pepper:{e:'�
 const LAPS=3,POINTS=[15,12,10,8,6,4],MAXP=6,CUP_LEN=3;
 // Les 12 circuits (le tracé et le décor sont dans tracks.js, côté TV). Le championnat = 3 circuits au choix.
 const TRACK_META=[{n:'Prairie Pétillante',e:'🌳'},{n:'Désert Dingo',e:'🌵'},{n:'Glacier Givré',e:'❄️'},{n:'Plage Paradisiaque',e:'🏖️'},{n:'Volcan Vorace',e:'🌋'},{n:'Pays des Bonbons',e:'🍭'},
- {n:'Circuit Cosmique',e:'🚀'},{n:'Forêt des Champignons',e:'🍄'},{n:'Jungle Joyeuse',e:'🦜'},{n:'Nuit des Lucioles',e:'✨'},{n:'Ferme Folle',e:'🐮'},{n:'Canyon Coloré',e:'🏔️'}];
+ {n:'Circuit Cosmique',e:'🚀'},{n:'Forêt des Champignons',e:'🍄'},{n:'Jungle Joyeuse',e:'🦜'},{n:'Nuit des Lucioles',e:'✨'},{n:'Ferme Folle',e:'🐮'},{n:'Canyon Coloré',e:'🏔️'},
+ {n:'Oasis Secrète',e:'🌴'}];
+// Championnats : chaque coupe regroupe des circuits (3 ou 4 courses). Les nouveaux circuits compliqués s'ajoutent un par un dans différentes coupes.
+const CUPS=[{n:'Coupe Prairie',e:'🌳',t:[0,7,10]},{n:'Coupe Soleil',e:'☀️',t:[1,3,11,12]},{n:'Coupe Frisson',e:'🌋',t:[2,4,8]},{n:'Coupe Féérie',e:'✨',t:[5,6,9]}];
+const cupLabel=c=>{const f=CUPS.find(q=>q.t.length==c.length&&q.t.every((x,i)=>x==c[i]));return f?f.e+' '+f.n:'✏️ Sur mesure'};
 // Cri affiché sur la TV quand un joueur klaxonne (le son est joué sur son téléphone)
 const CRY_WORD={trex:'GRAOUH !',panda:'GRRR !',dog:'WOUAF !',cat:'MIAOU !',pig:'GROIN !',bunny:'COUIC !',frog:'COAAA !',tri:'TROUUT !'};
-const DEFAULT_CUP=[0,1,2];
+const DEFAULT_CUP=CUPS[0].t.slice();
 // Découpage de l'écran de la TV selon le nombre de joueurs : [colonnes, lignes]
 const gridFor=n=>n<=1?[1,1]:n==2?[2,1]:n<=4?[2,2]:[3,2];
-const cleanCup=v=>{if(!Array.isArray(v)||v.length!=CUP_LEN)return null;const a=v.map(x=>x|0);return a.every(x=>x>=0&&x<TRACK_META.length)&&new Set(a).size==CUP_LEN?a:null};
+const cleanCup=v=>{if(!Array.isArray(v)||v.length<3||v.length>5)return null;const a=v.map(x=>x|0);return a.every(x=>x>=0&&x<TRACK_META.length)&&new Set(a).size==a.length?a:null};
 const DEFAULT_CFG={ch:0,ka:0,col:'#e53935',emb:{sh:0,bg:'#fdd835',fg:'#212121',s:'⚡'}};
 const hex=c=>'#'+c.toString(16).padStart(6,'0');
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));

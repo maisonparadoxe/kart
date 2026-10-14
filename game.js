@@ -70,7 +70,7 @@ setInterval(()=>{const t=now();
   if(!p.off&&t-p.seen>6000)markOff(p);
   else send(p,{t:'ping'});
   if(p.off&&phase=='lobby'&&t-p.offAt>45000){players.splice(players.indexOf(p),1);lobby()}}},1000);
-function sendPhase(p){const m={t:'phase',p:phase,race,nr:CUP_LEN,track:TRACK_META[cup[race]].n,cup,lead:p===leader(),bots:useBots,voice:CMT.mode(),hasVoice:CMT.hasVoice()};
+function sendPhase(p){const m={t:'phase',p:phase,race,nr:cup.length,track:TRACK_META[cup[race]].n,cup,lead:p===leader(),bots:useBots,voice:CMT.mode(),hasVoice:CMT.hasVoice()};
  if(phase=='results'||phase=='podium'){const o=standings();m.pos=(p.lastPos||0);m.gain=p.gain||0;m.pts=p.pts;m.rank=o.indexOf(p)+1;m.n=o.length}
  send(p,m)}
 
@@ -81,7 +81,7 @@ function lobby(){players.forEach(p=>sendPhase(p));if(phase!='lobby')return;
  $('pl').innerHTML=players.map(p=>card(p,p.off?' · 📵 reconnexion…':p.ready?' · ✅ prêt':' · …')).join('')||'<div class=empty>Personne pour l’instant…</div>';
  const ok=canStart();
  $('msg').textContent=ok?'Tout le monde est prêt ! Le joueur 1 lance (ou Entrée sur la TV)':players.length?'En attente des joueurs…':'Test sans téléphone : touche K = joueur clavier (flèches + espace)';
- $('cup').innerHTML='<b>🏆 Championnat</b>'+cup.map((c,i)=>`<span><i>${i+1}</i>${TRACK_META[c].e} ${esc(TRACK_META[c].n)}</span>`).join('')+'<small>Joueur 1 : choisis les circuits sur ton téléphone — touche T = au hasard</small>';
+ $('cup').innerHTML='<b>🏆 '+esc(cupLabel(cup))+'</b>'+cup.map((c,i)=>`<span><i>${i+1}</i>${TRACK_META[c].e} ${esc(TRACK_META[c].n)}</span>`).join('')+'<small>Joueur 1 : choisis le championnat sur ton téléphone — touche T = championnat suivant</small>';
  $('opts').innerHTML=`🤖 Bots : ${useBots?'oui':'non'} (B) — 🎙️ Commentateur : ${CMT.mode()=='voice'?'vraie voix':'blabla'} (V) — ${SFX.isOn()?'🔊 Son : oui':'🔇 Son : coupé'} (M)${SFX.unlocked()?'':'<br><b>🔈 Appuie sur une touche ou clique pour activer le son</b>'}`}
 function toggleVoice(){CMT.setMode(CMT.mode()=='voice'?'blabla':'voice');if(CMT.mode()=='voice'&&!CMT.hasVoice())toast('Pas de voix française sur ce navigateur : blabla à la place');lobby();CMT.say('join',{n:'tout le monde'},3)}
 // Musique uniquement hors course
@@ -102,8 +102,8 @@ function startRace(){loadTrack(cup[race],true);clearRace();phase='race';fin=0;en
  racers=race==0?[...bots,...players]:standings().reverse();
  const H=TR.h0,fx=Math.sin(H),fz=Math.cos(H),a=TR.C[0];
  racers.forEach((p,k)=>{const lat=(k%2?1:-1)*3.5,bk=6+Math.floor(k/2)*6;
-  Object.assign(p,{h:H,pos:[a[0]-fz*lat-fx*bk,a[1]+fx*lat-fz*bk],v:0,lap:0,fin:0,finT:0,item:null,roll:0,boost:0,spin:0,spinA:0,shield:0,safe:0,maxLap:0,blockT:0,lastI:0,cool:{},aiUse:0,seed:Math.random()*99,cam:null});
-  p.idx=nearest(TR,p.pos[0],p.pos[1])[1];p.y=surf(TR,p.pos[0],p.pos[1],p.idx);p.gr=0;p.mesh=mkKart(p.cfg);scene.add(p.mesh)});
+  Object.assign(p,{h:H,pos:[a[0]-fz*lat-fx*bk,a[1]+fx*lat-fz*bk],v:0,lap:0,fin:0,finT:0,item:null,roll:0,boost:0,spin:0,spinA:0,shield:0,safe:0,maxLap:0,blockT:0,lastI:0,cool:{},aiUse:0,seed:Math.random()*99,cam:null,br:0,bi:0,wantSc:false});
+  p.idx=nearest(TR,p.pos[0],p.pos[1])[1];p.y=surf(TR,p.pos[0],p.pos[1],p.idx);p.gr=0;p.wantSc=!!(TR.sc&&p.bot&&Math.random()<.5);p.mesh=mkKart(p.cfg);scene.add(p.mesh)});
  // Chaque joueur garde le même cadre d'écran pendant tout le championnat (ordre d'arrivée dans la partie)
  views=players.filter(p=>racers.includes(p));
  $('huds').innerHTML='';const[cs,rs]=gridFor(views.length);
@@ -114,25 +114,25 @@ function startRace(){loadTrack(cup[race],true);clearRace();phase='race';fin=0;en
  {const m=$('mini'),n=views.length;m.className='';m.style.cssText='';
   if(n>2){if(n<cs*rs){const col=n%cs,row=Math.floor(n/cs),sz=Math.min(24,46/rs);m.style.cssText=`left:${(col+.5)*100/cs}%;top:${(row+.5)*100/rs}%;right:auto;bottom:auto;transform:translate(-50%,-50%);width:${sz}vh;height:${sz}vh`}else m.className='mid'}}
  t0=now()+3500;lastCount=0;lastLeader=null;lastLapSaid=false;CMT.reset();music();
- if(race==CUP_LEN-1){const l=standings()[0];CMT.say('final',{n:l.name,pts:l.pts},2)}else CMT.say('start',{track:TRACK_META[cup[race]].n},2);
+ if(race==cup.length-1){const l=standings()[0];CMT.say('final',{n:l.name,pts:l.pts},2)}else CMT.say('start',{track:TRACK_META[cup[race]].n},2);
  lobby()}
 function clearRace(){racers.forEach(p=>{p.mesh&&scene.remove(p.mesh);p.mesh=null;p.hud=null});hz.forEach(h=>scene.remove(h.m));fx.forEach(f=>scene.remove(f.m));hz=[];fx=[];racers=[];$('huds').innerHTML=''}
 function endRace(){const o=[...racers].sort((a,b)=>prog(b)-prog(a));
  o.forEach((p,i)=>{p.lastPos=i+1;p.gain=POINTS[i]||0;p.pts+=p.gain});
  phase='results';$('big').textContent='';music();
- const last=race==CUP_LEN-1;
+ const last=race==cup.length-1;
  racers.forEach(p=>p.hud=null);$('huds').innerHTML='';
  const row=(p,a,b,c)=>`<tr style="--c:${p.cfg.col}"><td class=n>${a}</td><td><img src="${embImg(p.cfg.emb)}"></td><td class=nm>${b}</td><td class=g>${c}</td></tr>`;
  $('ui').className='res';$('ui').innerHTML=`<h1>${TRACK_META[cup[race]].e} ${esc(TRACK_META[cup[race]].n)}</h1><div class=cols>
   <div><h2>Résultats de la course</h2><table>${o.map((p,i)=>row(p,ord(i+1),`${CHARS[p.cfg.ch].e} ${esc(p.name)}${p.bot?' 🤖':''}`,'+'+p.gain)).join('')}</table></div>
-  <div><h2>Championnat — course ${race+1}/${CUP_LEN}</h2><table>${standings().map((p,i)=>row(p,i+1+'.',esc(p.name),p.pts+' pts')).join('')}</table></div></div>
+  <div><h2>Championnat — course ${race+1}/${cup.length}</h2><table>${standings().map((p,i)=>row(p,i+1+'.',esc(p.name),p.pts+' pts')).join('')}</table></div></div>
   <div class=msg>${last?'🏆 Entrée / joueur 1 : voir le podium':'▶ Entrée / joueur 1 : course suivante — '+esc(TRACK_META[cup[race+1]].n)}</div>`;
  lobby()}
 function podium(){phase='podium';clearRace();const o=standings(),top=[o[1],o[0],o[2]];SFX.lib.fanfare();setTimeout(()=>SFX.lib.cheer(1.5),1500);CMT.say('champion',{n:o[0].name},3);setTimeout(music,4000);
  $('ui').className='res pod';$('ui').innerHTML=`<h1>🏆 Champion : ${esc(o[0].name)} !</h1><div class=podium>${top.map((p,i)=>p?`<div class="step s${[2,1,3][i]}" style="--c:${p.cfg.col}"><img src="${embImg(p.cfg.emb)}"><b>${esc(p.name)}</b><small>${p.pts} pts</small><div class=blk>${[2,1,3][i]}</div></div>`:'').join('')}</div>
   <div class=msg>Entrée / joueur 1 : retour au garage</div><div class=confetti>${Array.from({length:60},(_,i)=>`<i style="left:${Math.random()*100}%;animation-delay:${Math.random()*3}s;background:${COLORS[i%COLORS.length]}"></i>`).join('')}</div>`;
  lobby()}
-function next(){if(phase=='results'){if(race<CUP_LEN-1){race++;startRace()}else podium()}else if(phase=='podium')backToLobby()}
+function next(){if(phase=='results'){if(race<cup.length-1){race++;startRace()}else podium()}else if(phase=='podium')backToLobby()}
 function backToLobby(){clearRace();phase='lobby';CMT.reset();music();race=0;loadTrack(cup[0]);bots=[];players.forEach(p=>p.ready=!!p.key);
  $('ui').className='';$('ui').innerHTML=LOBBY_HTML;if(peer&&peer.id)showQR(peer.id);lobby()}
 const LOBBY_HTML=$('ui').innerHTML;
@@ -146,8 +146,12 @@ function vib(p,k,x){if(!p.bot)send(p,{t:'fx',k,x})}
 let lastCount=0,lastLeader=null,lastLapSaid=false;
 function hit(p,dur,word,kind,by){if(p.shield>0){if(!p.blockT||now()-p.blockT>1000){p.blockT=now();pop(p,'BLOQUÉ !','#4fc3f7');vib(p,'block');CMT.hit(p,'block',by)}return}
  if(p.safe>0)return;p.spin=dur;p.safe=dur+.8;p.v*=.3;pop(p,word,'#ff5252');vib(p,{bomb:'boom',banana:'slip',oil:'oil'}[kind]||'hit');CMT.hit(p,kind,by)}
-function ai(p,t){const look=Math.round(7+Math.max(0,p.v)*.22),j=(p.idx+look)%N,lat=Math.sin(t/2600+p.seed)*4,c=TR.C[j],n=TR.Nr[j];
- let d=Math.atan2(c[0]+n[0]*lat-p.pos[0],c[1]+n[1]*lat-p.pos[1])-p.h;d=Math.atan2(Math.sin(d),Math.cos(d));
+function ai(p,t){const look=Math.round(7+Math.max(0,p.v)*.22),sc=TR.sc;let j=(p.idx+look)%N,lat=Math.sin(t/2600+p.seed)*4,c=TR.C[j],n=TR.Nr[j],tx,tz;
+ // Raccourci : sur la branche on la suit ; avant l'embranchement, les bots qui le veulent visent son entrée
+ if(sc&&p.br){const k=p.bi+look;if(k<sc.n){tx=sc.C[k][0];tz=sc.C[k][1]}else{j=(sc.b+(k-sc.n+1))%N;c=TR.C[j];n=TR.Nr[j]}}
+ else if(sc&&p.wantSc&&p.idx>=sc.a-12&&p.idx<sc.a){const k=Math.min(sc.n-1,Math.max(0,look-(sc.a-p.idx)));tx=sc.C[k][0];tz=sc.C[k][1]}
+ if(tx==null){tx=c[0]+n[0]*lat;tz=c[1]+n[1]*lat}
+ let d=Math.atan2(tx-p.pos[0],tz-p.pos[1])-p.h;d=Math.atan2(Math.sin(d),Math.cos(d));
  if(p.item&&!p.aiUse)p.aiUse=t+800+Math.random()*3500;
  const use=p.item&&t>p.aiUse;if(use)p.aiUse=0;
  return{s:Math.max(-1,Math.min(1,-d*2.6)),g:1,b:Math.abs(d)>1.1?1:0,i:use?1:0}}
@@ -178,24 +182,27 @@ function step(dt,t){const left=(t0-t)/1000,go=left<=0;
   if(p.spin>0){p.spin=Math.max(0,p.spin-dt);p.spinA+=dt*16;inp=ZERO}else p.spinA=0;
   if(p.roll&&t>p.roll){p.roll=0;p.item=pickItem(p);vib(p,'got')}
   if(inp.i&&!p.lastI&&p.item&&!p.roll)useItem(p,t);p.lastI=inp.i;
-  let[d,i]=nearest(TR,p.pos[0],p.pos[1],p.idx);
-  // Murs (ponts, croisements) : impossible de quitter la route ou de couper à travers
-  if(TR.wall[i]&&d>W+1.55){const c=TR.C[i],k=(d-(W+1.55))/d;p.pos[0]+=(c[0]-p.pos[0])*k;p.pos[1]+=(c[1]-p.pos[1])*k;p.v-=p.v*Math.min(1,dt*2.2);d=W+1.55}
-  const off=d>W+1.6,gr=TR.G[i];
+  const L=locate(TR,p),B=L.br?TR.sc:TR,bi=L.br?L.bi:L.i,BW=B.w||W,i=L.i;let d=L.d;
+  // « Raccourci ! » seulement une fois vraiment engagé dans le couloir (pas à l'embranchement où les deux routes se chevauchent)
+  if(L.br&&bi>=12&&!p.inSc){p.inSc=1;pop(p,'RACCOURCI !','#ffd54f');vib(p,'boost');if(!p.bot&&!p.off)CMT.say('shortcut',{n:p.name},1)}else if(!L.br)p.inSc=0;
+  p.br=L.br;p.bi=bi;
+  // Murs (ponts, croisements, raccourci) : impossible de quitter la route ou de couper à travers
+  if(B.wall[bi]&&d>BW+1.55){const c=B.C[bi],k=(d-(BW+1.55))/d;p.pos[0]+=(c[0]-p.pos[0])*k;p.pos[1]+=(c[1]-p.pos[1])*k;p.v-=p.v*Math.min(1,dt*2.2);d=BW+1.55}
+  const off=d>BW+1.6,gr=B.G[bi];
   // Les bots trichent un peu moins quand ils sont loin devant les humains
   let sf=p.bot?p.sf:1;if(p.bot&&views.length){const best=Math.max(...views.map(prog));sf*=prog(p)>best+40?.9:prog(p)<best-60?1.1:1}
-  const max=ka.spd*sf*(off?.5:1)*(p.boost>0?1.45:1)*(p.shield>0?1.08:1)*(1-Math.max(-.12,Math.min(.18,gr))*1.6),target=inp.g?max:inp.b?-max*.3:0;
+  const max=ka.spd*sf*(off?.5:1)*(p.boost>0?1.45:1)*(p.shield>0?1.08:1)*(B.slow||1)*(1-Math.max(-.12,Math.min(.18,gr))*1.6),target=inp.g?max:inp.b?-max*.3:0;
   p.v+=(target-p.v)*Math.min(1,(p.boost>0?4:ka.acc)*dt*(inp.g||inp.b?1:.6));
   if(p.v>max)p.v+=(max-p.v)*Math.min(1,3*dt);
   p.h-=inp.s*ka.han*dt*Math.max(-1,Math.min(1,p.v/12));
   p.pos[0]+=Math.sin(p.h)*p.v*dt;p.pos[1]+=Math.cos(p.h)*p.v*dt;
-  if(d>W*2.4){const c=TR.C[i],k=(d-W*2.4)/d;p.pos[0]+=(c[0]-p.pos[0])*k;p.pos[1]+=(c[1]-p.pos[1])*k;p.v*=.9}
+  if(d>BW*2.4){const c=B.C[bi],k=(d-BW*2.4)/d;p.pos[0]+=(c[0]-p.pos[0])*k;p.pos[1]+=(c[1]-p.pos[1])*k;p.v*=.9}
   if(p.idx>N*.8&&i<N*.2){p.lap++;if(p.lap>=2&&p.lap<=LAPS&&p.lap>(p.maxLap||0)){vib(p,p.lap==LAPS?'last':'lap');
     if(p.lap==LAPS&&!p.bot&&!lastLapSaid){lastLapSaid=true;CMT.say('last',{n:p.name},2)}}p.maxLap=Math.max(p.maxLap||0,p.lap)}
   else if(p.idx<N*.2&&i>N*.8)p.lap--;
   p.idx=i;
   // Hauteur : le kart suit la route (et le talus s'il en sort) ; la pente l'accélère ou le ralentit
-  {const yt=Math.max(0,surf(TR,p.pos[0],p.pos[1],i)-Math.max(0,d-(W+2.1))/1.1);p.y+=(yt-p.y)*Math.min(1,dt*18);p.gr=gr;p.v-=gr*dt*10}
+  {const yt=Math.max(0,surf(B,p.pos[0],p.pos[1],bi)-Math.max(0,d-(BW+2.1))/1.1);p.y+=(yt-p.y)*Math.min(1,dt*18);p.gr=gr;p.v-=gr*dt*10}
   if(p.lap>LAPS&&!p.fin){p.fin=++fin;p.finT=t-t0;pop(p,ord(p.fin)+' !','#69f0ae');vib(p,'fin',p.fin);finished(p);
    if(!p.bot&&endAt==Infinity)endAt=t+25000}
   // Boîtes, boosts, obstacles
@@ -244,6 +251,7 @@ function hud(t){const items=Object.values(ITEMS).map(i=>i.e);
  const sc=(S-24)/Math.max(b-a,d-c),X=u=>S/2+(u-(a+b)/2)*sc,Y=v=>S/2-(v-(c+d)/2)*sc;
  x.lineJoin='round';x.beginPath();TR.C.forEach(([u,v],i)=>i?x.lineTo(X(u),Y(v)):x.moveTo(X(u),Y(v)));x.closePath();
  x.lineWidth=11;x.strokeStyle='#111';x.stroke();x.lineWidth=6;x.strokeStyle='#fff';x.stroke();
+ if(TR.sc){x.beginPath();TR.sc.C.forEach(([u,v],k)=>k?x.lineTo(X(u),Y(v)):x.moveTo(X(u),Y(v)));x.setLineDash([7,5]);x.lineWidth=5;x.strokeStyle='#ffd54f';x.stroke();x.setLineDash([])}
  for(const p of[...racers].reverse()){x.beginPath();x.arc(X(p.pos[0]),Y(p.pos[1]),p.bot?5:7,0,7);x.fillStyle=p.cfg.col;x.fill();x.lineWidth=2.5;x.strokeStyle='#111';x.stroke()}}
 function sendStatus(){for(const p of views)if(!p.key)send(p,{t:'st',rk:rankOf(p),n:racers.length,lap:Math.min(Math.max(p.lap,1),LAPS),laps:LAPS,fin:p.fin,it:p.roll?'🎲':p.item?ITEMS[p.item].e:'',v:Math.round(Math.max(0,p.v)),bo:p.boost>0?1:0})}
 
@@ -252,7 +260,7 @@ addEventListener('keydown',e=>{keys[e.code]=1;
  if(e.code=='Enter'){phase=='lobby'?tryStart():next()}
  if(e.code=='KeyB'&&phase=='lobby'){useBots=!useBots;lobby()}
  if(e.code=='KeyV')toggleVoice();
- if(e.code=='KeyT'&&phase=='lobby'){cup=randomCup();loadTrack(cup[0]);lobby()}
+ if(e.code=='KeyT'&&phase=='lobby'){const k=CUPS.findIndex(q=>cupLabel(cup)==q.e+' '+q.n);cup=CUPS[(k+1)%CUPS.length].t.slice();loadTrack(cup[0]);lobby()}
  if(e.code=='KeyF')$('fps').style.display=$('fps').style.display=='block'?'none':'block';
  if(e.code=='KeyM'){SFX.setOn(!SFX.isOn());music();lobby()}
  if(e.code=='KeyK'&&phase=='lobby'&&players.length<MAXP&&!players.some(p=>p.key)){players.push({key:1,pid:'kbd',name:'Clavier',cfg:{...DEFAULT_CFG,ch:3,col:'#00acc1',emb:{sh:2,bg:'#e53935',fg:'#fff',s:'K'}},ready:true,in:ZERO,pts:0,seen:now()});lobby()}
