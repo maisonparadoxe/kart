@@ -49,11 +49,14 @@ button{background:#e53935;color:#fff;font-size:26px;box-shadow:3px 3px 0 var(--i
 #rot{display:none;position:absolute;inset:0;background:#222;color:#fff;align-items:center;justify-content:center;text-align:center;font-size:24px;padding:20px}
 @media (orientation:portrait){#pad.on #rot{display:flex}}
 .big{font-size:64px;color:var(--y);-webkit-text-stroke:2px var(--ink);text-shadow:3px 3px 0 var(--ink);text-align:center}
+#cupb{background:#fff;color:var(--ink);font-family:system-ui,sans-serif;font-size:17px;text-align:left;box-shadow:3px 3px 0 var(--ink)}#cupb:disabled{opacity:1;color:#444}
+.opt{position:relative}.bdg{position:absolute;top:-8px;right:-8px;background:#e53935;color:#fff;width:28px;height:28px;border-radius:50%;border:3px solid var(--ink);font:normal 18px/22px Bangers,Impact,sans-serif;text-align:center}
 </style>
 <div id=conn></div><div id=wm></div><button id=snd>🔊</button>
 <section id=s0 class=on><h2>🏎️ Kart Party !</h2><input id=name placeholder="Ton pseudo" maxlength=12 autocomplete=off><button id=go>Rejoindre</button><div id=st></div></section>
 <section id=s1>
  <canvas id=pv width=420 height=230></canvas>
+ <button id=cupb></button>
  <h3>Pilote</h3><div class=row id=chs></div>
  <h3>Kart</h3><div class=row id=kas></div>
  <h3>Couleur du kart</h3><div class=sw id=cols></div>
@@ -64,10 +67,12 @@ button{background:#e53935;color:#fff;font-size:26px;box-shadow:3px 3px 0 var(--i
  <div class=bar><button id=rdy>Prêt !</button><button id=start style="display:none;background:#43a047">▶ Lancer le championnat</button>
   <button id=bots style="display:none;background:#5e35b1;font-size:20px"></button><button id=voice style="display:none;background:#00897b;font-size:20px"></button></div>
 </section>
+<section id=s3><h2>🏆 3 circuits</h2><div class=note>Touche dans l'ordre : 1ère, 2e puis 3e course</div><div class=row id=trs></div>
+ <div class=bar><button id=rnd style="background:#5e35b1">🎲 Au hasard</button><button id=okc style="background:#43a047">✔ Valider</button><button id=cnc style="background:#757575">Annuler</button></div></section>
 <section id=s2 style="align-items:center;justify-content:center;text-align:center"><h2 id=rt></h2><div class=big id=rb></div><div id=rs class=note style="font-size:20px"></div>
  <button id=nextb style="display:none;background:#43a047">▶ Continuer</button></section>
 <section id=pad>
-<div class="b pill" data-k=h style="left:2vw;top:4vh;background:#ff9800">📯 Klaxon</div><div class="b pill" data-k=b style="left:2vw;top:17vh">Frein</div>
+<div class="b pill" data-k=h style="left:2vw;top:4vh;background:#ff9800">🔊 Cri !</div><div class="b pill" data-k=b style="left:2vw;top:17vh">Frein</div>
 <div class="b pill" data-k=i style="right:2vw;top:4vh">🎁 Objet</div><div class="b pill" data-k=g style="right:2vw;top:17vh;background:#2e7d32">Gaz</div>
 <div class=g style="left:18vw"><div class="b u" data-k=g>▲</div><div class="b d" data-k=b>▼</div><div class="b l" data-k=l>◀</div><div class="b r" data-k=r>▶</div></div>
 <div class=g style="left:82vw"><div class="b u" data-k=i style="background:#a89a00">🎁</div><div class="b d" data-k=g style="background:#2e7d32">A</div><div class="b l" data-k=i style="background:#1e88e5">🎁</div><div class="b r" data-k=b style="background:#c62828">B</div></div>
@@ -102,13 +107,28 @@ function paint(){lists.forEach(l=>l.sync());document.documentElement.style.setPr
  [...$('shs').children].forEach((b,i)=>{b.innerHTML='';const c=document.createElement('canvas');c.width=c.height=96;c.style.width=c.style.height='44px';drawEmblem(c,{...cfg.emb,sh:i});b.appendChild(c)});
  drawKart();$('rdy').textContent=ready?'✅ Prêt ! (annuler)':'Prêt !'}
 // Aperçu du kart vu de profil
+// Pilote vu de profil (tête centrée en -38,-110, regarde vers la droite)
+function animal2D(x,F,ch){const hx=-38,hy=-110,c=hex(ch.c),eye=(ex,ey,s)=>{s=s||1;F('#fff',()=>x.arc(ex,ey,9*s,0,7));F('#111',()=>x.arc(ex+4*s,ey,4*s,0,7))},head=()=>F(c,()=>x.arc(hx,hy,34,0,7)),
+ tri=(col,a,b,d)=>F(col,()=>{x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.lineTo(d[0],d[1]);x.closePath()}),dot=(col,px,py,r)=>F(col,()=>x.arc(px,py,r,0,7)),ell=(col,px,py,rx,ry,rot)=>F(col,()=>x.ellipse(px,py,rx,ry,rot||0,0,7)),
+ tail=col=>tri(col,[-60,-52],[-116,-36],[-60,-28]);
+ switch(ch.k){
+ case'trex':tail(c);for(let i=0;i<3;i++)tri('#ff7043',[hx-30+i*14,hy-26],[hx-24+i*14,hy-48],[hx-14+i*14,hy-30]);head();ell('#81c784',hx+30,hy+6,24,15);dot('#1b5e20',hx+46,hy,2.5);eye(hx+6,hy-12,.9);break;
+ case'panda':dot(c,-66,-58,13);dot('#212121',hx-8,hy-32,12);head();ell('#212121',hx+8,hy-8,11,15,.4);dot('#fff',hx+9,hy-9,4);dot('#212121',hx+34,hy+4,6);break;
+ case'dog':tail(c);head();ell('#e8c9a0',hx+28,hy+8,21,15);dot('#111',hx+45,hy+3,5);F('#ff8a80',()=>x.rect(hx+26,hy+18,10,12));ell('#6d4c41',hx-8,hy+4,12,26,.2);eye(hx+8,hy-10,.9);break;
+ case'cat':F(c,()=>x.rect(0,0,0,0));x.save();x.lineWidth=14;x.strokeStyle='#111';x.beginPath();x.moveTo(-60,-46);x.quadraticCurveTo(-110,-50,-100,-96);x.stroke();x.lineWidth=8;x.strokeStyle=c;x.stroke();x.restore();
+  tri(c,[hx-24,hy-20],[hx-22,hy-54],[hx-2,hy-30]);tri(c,[hx-4,hy-30],[hx+14,hy-52],[hx+20,hy-18]);head();tri('#ff6f91',[hx+28,hy+1],[hx+36,hy+1],[hx+32,hy+7]);
+  x.save();x.lineWidth=2.5;x.beginPath();x.moveTo(hx+22,hy+8);x.lineTo(hx+52,hy+2);x.moveTo(hx+22,hy+12);x.lineTo(hx+52,hy+14);x.stroke();x.restore();eye(hx+8,hy-10,.9);break;
+ case'pig':dot(c,-64,-52,8);tri('#f06292',[hx-14,hy-28],[hx,hy-48],[hx+10,hy-26]);head();ell('#f8bbd0',hx+34,hy+4,13,16);dot('#ad1457',hx+37,hy-2,2.5);dot('#ad1457',hx+37,hy+9,2.5);eye(hx+4,hy-12,.9);break;
+ case'bunny':dot('#fff',-66,-58,13);ell(c,hx-14,hy-58,10,30,-.25);ell('#f8bbd0',hx-14,hy-58,5,22,-.25);ell(c,hx+4,hy-60,10,30,.08);ell('#f8bbd0',hx+4,hy-60,5,22,.08);head();dot('#f48fb1',hx+34,hy+2,4.5);F('#fff',()=>x.rect(hx+28,hy+10,8,11));eye(hx+6,hy-10,.9);break;
+ case'frog':ell(c,hx+4,hy+4,38,28);dot(c,hx+2,hy-26,13);eye(hx+4,hy-28,1);F('#33691e',()=>x.rect(hx+12,hy+8,28,4));dot('#ff8a80',hx+22,hy+16,5);break;
+ case'tri':tail(c);dot('#ff8a65',hx-14,hy-4,40);dot('#1e88e5',hx-14,hy-4,31);head();ell('#ffe0b2',hx+30,hy+8,19,13);tri('#fff3e0',[hx+2,hy-24],[hx+20,hy-60],[hx+24,hy-22]);tri('#fff3e0',[hx+36,hy-4],[hx+54,hy-12],[hx+44,hy+4]);eye(hx+6,hy-10,.9);break;
+ default:head();eye(hx+8,hy-8)}}
 function drawKart(){const c=$('pv'),x=c.getContext('2d'),S=c.width/420,ch=CHARS[cfg.ch],cc=hex(ch.c);x.clearRect(0,0,c.width,c.height);x.save();x.scale(S,S);x.translate(210,150);
  x.lineJoin='round';x.lineCap='round';x.lineWidth=6;x.strokeStyle='#111';const F=(col,f)=>{x.beginPath();f();x.fillStyle=col;x.fill();x.stroke()};
  x.fillStyle='rgba(0,0,0,.18)';x.beginPath();x.ellipse(0,58,170,12,0,0,7);x.fill();
  if(cfg.ka==1){F('#333',()=>x.rect(-138,-70,10,40));F(cfg.col,()=>x.rect(-170,-82,64,16))}
  F(cc,()=>x.rect(-62,-78,44,52));F('#333',()=>x.rect(-82,-92,22,72));
- F('#ffd9b3',()=>x.arc(-38,-110,34,0,7));F(cc,()=>{x.arc(-38,-114,36,Math.PI,0);x.closePath()});F(cc,()=>x.rect(-8,-122,36,10));
- F('#fff',()=>x.arc(-14,-106,9,0,7));F('#111',()=>x.arc(-9,-106,4,0,7));
+ animal2D(x,F,ch);
  x.beginPath();x.moveTo(-18,-60);x.lineTo(14,-78);x.stroke();
  const w=cfg.ka==2?12:0;F(cfg.col,()=>{x.moveTo(-150,22);x.lineTo(-155,-26);x.lineTo(-60,-34);x.lineTo(-30,-48);x.lineTo(70,-48);x.lineTo(100,-28);x.lineTo(160+(cfg.ka==1?14:0),-18);x.lineTo(168+(cfg.ka==1?14:0),18);x.closePath()});
  x.fillStyle='rgba(255,255,255,.35)';x.fillRect(-140,-22,280,8);
@@ -118,6 +138,15 @@ function drawKart(){const c=$('pv'),x=c.getContext('2d'),S=c.width/420,ch=CHARS[
  F('#9e9e9e',()=>x.rect(-178,-6,24,12));x.restore()}
 $('rdy').onclick=()=>{ready=!ready;paint();sendCfg()};
 $('start').onclick=()=>tx({t:'start'});$('nextb').onclick=()=>tx({t:'next'});
+let cup=DEFAULT_CUP.slice(),sel=[];
+const cupTxt=()=>'🏆 '+cup.map(i=>TRACK_META[i].e+' '+TRACK_META[i].n).join('  ›  ');
+function renderTr(){const el=$('trs');el.innerHTML='';TRACK_META.forEach((t,i)=>{const d=document.createElement('div'),k=sel.indexOf(i);d.className='opt'+(k>=0?' sel':'');
+ d.innerHTML=`<span style="font-size:30px">${t.e}</span><b>${t.n}</b>`+(k>=0?`<i class=bdg>${k+1}</i>`:'');
+ d.onclick=()=>{const q=sel.indexOf(i);if(q>=0)sel.splice(q,1);else{if(sel.length>=CUP_LEN)sel.shift();sel.push(i)}renderTr()};el.appendChild(d)});
+ $('okc').disabled=sel.length!=CUP_LEN;$('okc').style.opacity=sel.length==CUP_LEN?1:.5}
+$('cupb').onclick=()=>{if(!lead)return;sel=cup.slice();renderTr();show('s3')};
+$('rnd').onclick=()=>{sel=TRACK_META.map((_,i)=>i).sort(()=>Math.random()-.5).slice(0,CUP_LEN);renderTr()};
+$('okc').onclick=()=>{if(sel.length==CUP_LEN){tx({t:'cup',v:sel});show('s1')}};$('cnc').onclick=()=>show('s1');
 $('bots').onclick=()=>tx({t:'bots',v:$('bots').dataset.v!='1'});$('voice').onclick=()=>tx({t:'voice'});$('pv').onclick=()=>{SFX.init();horn()};
 // Son du téléphone : bouton 🔊/🔇 mémorisé
 const setSnd=v=>{SFX.setOn(v);store('kp-snd',v?'1':'0');$('snd').textContent=v?'🔊':'🔇'};setSnd(load('kp-snd')!='0');$('snd').onclick=()=>{SFX.init();setSnd(!SFX.isOn());if(SFX.isOn())SFX.lib.got()};
@@ -160,7 +189,8 @@ addEventListener('pagehide',()=>{drop();peer&&peer.destroy()});
 
 function onData(m){if(!m||typeof m!='object')return;
  if(m.t=='phase'){lead=!!m.lead;const was=phase;phase=m.p;
-  if(m.p=='lobby'){stopInputs();if(was&&was!='lobby')ready=false,sendCfg();show('s1');$('start').style.display=lead?'block':'none';
+  if(m.p=='lobby'){stopInputs();if(was&&was!='lobby')ready=false,sendCfg();if(document.body.dataset.s!='s3')show('s1');$('start').style.display=lead?'block':'none';
+   if(m.cup){cup=m.cup;$('cupb').textContent=cupTxt()+(lead?'  ✏️':'');$('cupb').disabled=!lead}
    $('voice').style.display=lead?'block':'none';$('voice').textContent=m.voice=='voice'?'🎙️ Voix : vraie voix':'🎙️ Voix : blabla';
    $('bots').style.display=lead?'block':'none';$('bots').dataset.v=m.bots?'1':'0';$('bots').textContent=m.bots?'🤖 Bots : oui':'🤖 Bots : non';paint()}
   else if(m.p=='race'){show('pad');if(was!='race'){navigator.vibrate&&navigator.vibrate(200);$('ipos').textContent='';$('islot').textContent='';$('ilap').textContent=m.track}startInputs()}
@@ -179,9 +209,9 @@ function onData(m){if(!m||typeof m!='object')return;
 const K={l:0,r:0,g:0,b:0,i:0,s:0};
 function startInputs(){if(inT)return;inT=setInterval(()=>{K.s+=Math.max(-.25,Math.min(.25,K.r-K.l-K.s));tx({t:'in',v:{s:K.s,g:K.g,b:K.b,i:K.i}})},33)}
 function stopInputs(){clearInterval(inT);inT=0;SFX.engine.stop()}
-let hornT=0;const horn=()=>{const t=Date.now();if(t-hornT<700)return;hornT=t;SFX.horns[cfg.ka%SFX.horns.length]();tx({t:'horn'})};
+let hornT=0;const horn=()=>{const t=Date.now();if(t-hornT<700)return;hornT=t;SFX.cry(CHARS[cfg.ch].k);navigator.vibrate&&navigator.vibrate(60);tx({t:'horn'})};
 document.querySelectorAll('.b').forEach(b=>{const k=b.dataset.k,set=v=>{K[k]=v;b.classList.toggle('dn',!!v);if(v&&k=='i')navigator.vibrate&&navigator.vibrate(40);if(v&&k=='h')horn()};
- b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);set(1)});
+ b.addEventListener('pointerdown',e=>{e.preventDefault();try{b.setPointerCapture(e.pointerId)}catch(x){}set(1)});
  ['pointerup','pointercancel','lostpointercapture'].forEach(t=>b.addEventListener(t,()=>set(0)))});
 document.addEventListener('contextmenu',e=>e.preventDefault());
 

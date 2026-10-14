@@ -1,11 +1,22 @@
 // Données et utilitaires partagés entre la TV (index.html) et la manette (controller.html)
-const CHARS=[{n:'Rouge',c:0xe53935,e:'🍄'},{n:'Bleu',c:0x1e88e5,e:'🐢'},{n:'Vert',c:0x43a047,e:'🦖'},{n:'Jaune',c:0xfdd835,e:'⭐'},{n:'Rose',c:0xec407a,e:'🐷'},{n:'Violet',c:0x8e24aa,e:'👾'}];
+// Personnages : des animaux. c = couleur du pelage, k = modèle 3D/2D (voir toon.js et controller.html)
+const CHARS=[{n:'T-Rex',e:'🦖',c:0x4caf50,k:'trex'},{n:'Panda',e:'🐼',c:0xffffff,k:'panda'},{n:'Chien',e:'🐶',c:0xc68642,k:'dog'},{n:'Chat',e:'🐱',c:0xff9800,k:'cat'},
+ {n:'Cochon',e:'🐷',c:0xf48fb1,k:'pig'},{n:'Lapin',e:'🐰',c:0xeeeeee,k:'bunny'},{n:'Grenouille',e:'🐸',c:0x7cb342,k:'frog'},{n:'Tricéra',e:'🦕',c:0x42a5f5,k:'tri'}];
 const KARTS=[{n:'Équilibré',spd:36,acc:1.5,han:1.9},{n:'Fusée',spd:41,acc:1.0,han:1.5},{n:'Drifteur',spd:33,acc:2.2,han:2.5}];
 const COLORS=['#e53935','#fb8c00','#fdd835','#7cb342','#00acc1','#1e88e5','#5e35b1','#d81b60','#f5f5f5','#212121','#6d4c41','#ff80ab'];
 const SHAPES=['Rond','Bouclier','Étoile','Losange','Hexagone','Cœur'];
 const SYMBOLS=['⚡','🔥','💀','👑','🌙','⭐','🐉','🦊','🍕','🎯','❤️','☠️','🌈','🚀','🐙','🍀'];
 const ITEMS={banana:{e:'🍌',n:'Banane'},bomb:{e:'💣',n:'Bombe'},pepper:{e:'🌶️',n:'Piment turbo'},shield:{e:'🛡️',n:'Bouclier'}};
-const LAPS=3,POINTS=[15,12,10,8,6,4];
+const LAPS=3,POINTS=[15,12,10,8,6,4],MAXP=6,CUP_LEN=3;
+// Les 12 circuits (le tracé et le décor sont dans tracks.js, côté TV). Le championnat = 3 circuits au choix.
+const TRACK_META=[{n:'Prairie Pétillante',e:'🌳'},{n:'Désert Dingo',e:'🌵'},{n:'Glacier Givré',e:'❄️'},{n:'Plage Paradisiaque',e:'🏖️'},{n:'Volcan Vorace',e:'🌋'},{n:'Pays des Bonbons',e:'🍭'},
+ {n:'Circuit Cosmique',e:'🚀'},{n:'Forêt des Champignons',e:'🍄'},{n:'Jungle Joyeuse',e:'🦜'},{n:'Nuit des Lucioles',e:'✨'},{n:'Ferme Folle',e:'🐮'},{n:'Canyon Coloré',e:'🏔️'}];
+// Cri affiché sur la TV quand un joueur klaxonne (le son est joué sur son téléphone)
+const CRY_WORD={trex:'GRAOUH !',panda:'GRRR !',dog:'WOUAF !',cat:'MIAOU !',pig:'GROIN !',bunny:'COUIC !',frog:'COAAA !',tri:'TROUUT !'};
+const DEFAULT_CUP=[0,1,2];
+// Découpage de l'écran de la TV selon le nombre de joueurs : [colonnes, lignes]
+const gridFor=n=>n<=1?[1,1]:n==2?[2,1]:n<=4?[2,2]:[3,2];
+const cleanCup=v=>{if(!Array.isArray(v)||v.length!=CUP_LEN)return null;const a=v.map(x=>x|0);return a.every(x=>x>=0&&x<TRACK_META.length)&&new Set(a).size==CUP_LEN?a:null};
 const DEFAULT_CFG={ch:0,ka:0,col:'#e53935',emb:{sh:0,bg:'#fdd835',fg:'#212121',s:'⚡'}};
 const hex=c=>'#'+c.toString(16).padStart(6,'0');
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));

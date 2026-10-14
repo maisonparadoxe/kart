@@ -44,6 +44,17 @@ const SFX=(()=>{let ctx=null,master=null,musicBus=null,on=true,nbuf=null;
  const horns=[()=>{tone(415,.18,{v:.16,hold:1});tone(330,.3,{v:.16,t:.2,hold:1})},
   ()=>notes([[523,0,.09],[523,.11,.09],[523,.22,.09],[698,.33,.25],[880,.62,.3]],{v:.13,hold:1}),
   ()=>{tone(220,.5,{type:'sawtooth',v:.12,hold:1,vib:6});tone(277,.5,{type:'sawtooth',v:.08,hold:1,vib:6})}];
+ // Cris des animaux : le « klaxon » de chaque personnage (synthétisés, courts et drôles)
+ const cries={
+  dog:()=>{for(const t of[0,.22]){tone(420,.15,{type:'sawtooth',v:.17,f2:190,t});noise(.1,{v:.14,f:1000,q:2,t})}},
+  cat:()=>{tone(480,.2,{type:'triangle',v:.15,f2:980});tone(980,.45,{type:'triangle',v:.15,f2:520,vib:7,t:.2});noise(.5,{v:.03,f:4000,type:'highpass'})},
+  pig:()=>{for(const t of[0,.24,.48]){tone(190,.18,{type:'sawtooth',v:.15,f2:120,vib:32,t});noise(.15,{v:.07,f:300,type:'lowpass',t})}},
+  frog:()=>{for(const t of[0,.11,.22,.5,.61])tone(t<.4?150:190,.08,{type:'square',v:.1,f2:t<.4?230:260,t})},
+  trex:()=>{tone(100,1,{type:'sawtooth',v:.17,f2:55,vib:26,att:.08});noise(.95,{v:.2,f:600,f2:140,q:.7,att:.1});tone(210,.8,{type:'sawtooth',v:.05,f2:90,vib:18,t:.05})},
+  panda:()=>{tone(230,.55,{type:'triangle',v:.17,f2:150,vib:9,att:.05});noise(.5,{v:.04,f:500,type:'lowpass'})},
+  bunny:()=>{for(const t of[0,.12])tone(1500,.08,{type:'sine',v:.14,f2:2300,t})},
+  tri:()=>{tone(300,.8,{type:'sawtooth',v:.12,f2:600,vib:11,att:.06});tone(307,.8,{type:'sawtooth',v:.1,f2:608,vib:11,att:.06});noise(.7,{v:.05,f:1500,q:.6})}};
+ const cry=k=>(cries[k]||horns[0])();
  // Voix « blabla » du commentateur : un petit son par syllabe, hauteur au hasard autour d'une note
  function blabla(text,base=230){if(!ready())return 0;let t=0;const s=text.replace(/[^\p{L}\s!?.]/gu,'');
   for(let i=0;i<s.length;i++){const c=s[i];if(/[aeiouyàâéèêëîïôûù]/i.test(c)){tone(base*(1+Math.random()*.5)*(s[i+1]=='!'||s[i+1]=='?'?1.3:1),.07,{type:'triangle',v:.09,t});t+=.075}
@@ -68,4 +79,4 @@ const SFX=(()=>{let ctx=null,master=null,musicBus=null,on=true,nbuf=null;
    E.o1.frequency.setTargetAtTime(fr,t,.09);E.o2.frequency.setTargetAtTime(fr*.505,t,.09);E.l.frequency.setTargetAtTime(fr/4,t,.09);
    E.f.frequency.setTargetAtTime(260+k*900+(bo?500:0),t,.1);E.g.gain.setTargetAtTime(.035+k*.035,t,.12)},
   stop(){if(!E)return;const e=E,t=ctx.currentTime;E=null;e.g.gain.setTargetAtTime(0,t,.08);setTimeout(()=>{[e.o1,e.o2,e.l].forEach(o=>{try{o.stop()}catch(x){}});e.g.disconnect()},500)}};
- return{init,lib,horns,blabla,music,engine,ready,unlocked:()=>!!ctx&&ctx.state=='running',setOn:v=>{on=v;if(!v)engine.stop()},isOn:()=>on}})();
+ return{init,lib,horns,cry,cries,blabla,music,engine,ready,unlocked:()=>!!ctx&&ctx.state=='running',setOn:v=>{on=v;if(!v)engine.stop()},isOn:()=>on}})();
