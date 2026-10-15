@@ -11,9 +11,9 @@ const LAPS=3,POINTS=[15,12,10,8,6,4],MAXP=6,CUP_LEN=3;
 // Les 12 circuits (le tracé et le décor sont dans tracks.js, côté TV). Le championnat = 3 circuits au choix.
 const TRACK_META=[{n:'Prairie Pétillante',e:'🌳'},{n:'Désert Dingo',e:'🌵'},{n:'Glacier Givré',e:'❄️'},{n:'Plage Paradisiaque',e:'🏖️'},{n:'Volcan Vorace',e:'🌋'},{n:'Pays des Bonbons',e:'🍭'},
  {n:'Circuit Cosmique',e:'🚀'},{n:'Forêt des Champignons',e:'🍄'},{n:'Jungle Joyeuse',e:'🦜'},{n:'Nuit des Lucioles',e:'✨'},{n:'Ferme Folle',e:'🐮'},{n:'Canyon Coloré',e:'🏔️'},
- {n:'Oasis Secrète',e:'🌴'}];
+ {n:'Oasis Secrète',e:'🌴'},{n:'Volcan en Éruption',e:'☄️'}];
 // Championnats : chaque coupe regroupe des circuits (3 ou 4 courses). Les nouveaux circuits compliqués s'ajoutent un par un dans différentes coupes.
-const CUPS=[{n:'Coupe Prairie',e:'🌳',t:[0,7,10]},{n:'Coupe Soleil',e:'☀️',t:[1,3,11,12]},{n:'Coupe Frisson',e:'🌋',t:[2,4,8]},{n:'Coupe Féérie',e:'✨',t:[5,6,9]}];
+const CUPS=[{n:'Coupe Prairie',e:'🌳',t:[0,7,10]},{n:'Coupe Soleil',e:'☀️',t:[1,3,11,12]},{n:'Coupe Frisson',e:'🌋',t:[2,4,8,13]},{n:'Coupe Féérie',e:'✨',t:[5,6,9]}];
 const cupLabel=c=>{const f=CUPS.find(q=>q.t.length==c.length&&q.t.every((x,i)=>x==c[i]));return f?f.e+' '+f.n:'✏️ Sur mesure'};
 // Cri affiché sur la TV quand un joueur klaxonne (le son est joué sur son téléphone)
 const CRY_WORD={trex:'GRAOUH !',panda:'GRRR !',dog:'WOUAF !',cat:'MIAOU !',pig:'GROIN !',bunny:'COUIC !',frog:'COAAA !',tri:'TROUUT !'};

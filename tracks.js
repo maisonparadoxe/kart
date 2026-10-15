@@ -27,6 +27,7 @@ const PTS={
  bonbon:[[-150,-90],[-70,-110],[0,-60],[70,-110],[150,-90],[165,-20],[100,10],[160,50],[130,105],[60,90],[0,115],[-60,70],[-120,110],[-165,60],[-130,-10],[-165,-40]],
  foret:[[-150,-80],[-40,-105],[60,-60],[150,-100],[160,0],[100,40],[150,100],[30,110],[-40,60],[-100,110],[-165,50],[-120,-10]],
  nuit:[[-150,-100],[-60,-110],[20,-90],[40,-30],[100,-10],[160,-50],[170,30],[120,100],[30,110],[-40,70],[-110,100],[-165,60],[-150,-10]],
+ cratere:[[-155,-70],[-90,-105],[-20,-95],[50,-70],[110,-105],[165,-65],[150,-5],[85,15],[130,60],[150,105],[60,115],[-20,100],[-60,50],[-130,85],[-165,30]],
  ferme:[[-165,-85],[-40,-105],[110,-105],[165,-70],[165,30],[110,80],[40,50],[-30,95],[-100,110],[-165,70]]};
 
 const TH={ // th : sky[haut,bas] fog gnd spot road[2] kerb[2] hill decor + options (island, sea, stars, nohill, noclouds, cloud, barrel, oil, skirt, rail[2])
@@ -41,6 +42,7 @@ const TH={ // th : sky[haut,bas] fog gnd spot road[2] kerb[2] hill decor + optio
  jungle:{sky:['#00bfa5','#b2ff59'],fog:0xb9f6ca,gnd:0x2e7d32,spot:0x1b5e20,road:[0x8d6e63,0x9a7b6f],kerb:[0xffeb3b,0x33691e],hill:0x1b5e20,decor:'jungle',skirt:0x1b5e20,rail:[0xffeb3b,0x33691e]},
  nuit:{sky:['#050a30','#283593'],fog:0x1a237e,gnd:0x1b3a4b,spot:0x14303d,road:[0x3a4a6b,0x44567a],kerb:[0xffee58,0x1a237e],hill:0x0d1b3a,decor:'night',noclouds:1,stars:1,barrel:0x6a1b9a,skirt:0x14303d},
  ferme:{sky:['#4fc3f7','#fffde7'],fog:0xfffde7,gnd:0xaed581,spot:0x9ccc65,road:[0xa1887f,0xad9488],kerb:[0xffffff,0xd84315],hill:0x81c784,decor:'farm',barrel:0x8d6e63,skirt:0x9ccc65},
+ eruption:{sky:['#2b0a0a','#ff6a3d'],fog:0x7a2a16,gnd:0x3b1f1a,spot:0xff3d00,road:[0x2f3a40,0x3a474f],kerb:[0xff6d00,0x1b1b1b],hill:0x2d1512,decor:'eruption',cloud:0x4e342e,barrel:0x455a64,oil:0xff7043,skirt:0x2d1512,rail:[0xff6d00,0x1b1b1b]},
  oasis:{sky:['#ffb74d','#fff3e0'],fog:0xfff1d6,gnd:0xf0d28a,spot:0xe0b866,road:[0x7a6a58,0x857463],kerb:[0x26a69a,0xffffff],hill:0xe3a857,decor:'oasis',barrel:0x8d6e63,skirt:0xe0b866,rail:[0x26a69a,0xffffff]},
  canyon:{sky:['#4dd0e1','#ffe0b2'],fog:0xffe0b2,gnd:0xd7a26a,spot:0xc98a52,road:[0x6d5a4a,0x786452],kerb:[0xffffff,0xbf360c],hill:0xbf6a3a,decor:'canyon',skirt:0xc98a52,rail:[0xbf360c,0xffffff]}};
 // hill : [[amplitude, ondulations par tour, phase],…]
@@ -57,7 +59,11 @@ const TRACKS=[
  {P:bspline(PTS.nuit),sm:6,th:TH.nuit,hill:[[4,2,3]]},
  {P:bspline(PTS.ferme),sm:6,th:TH.ferme,hill:[[3,2,2]]},
  {P:LOOP,sm:0,th:TH.canyon,hill:[[3,3,1]]},
- {P:OASIS,sm:3,th:TH.oasis,hill:[[2.5,2,1]],sc:{a:234,b:68,w:8,slow:.93},pond:1}];
+ {P:OASIS,sm:3,th:TH.oasis,hill:[[2.5,2,1]],sc:{a:234,b:68,w:8,slow:.93},pond:1},
+ // Dangers qui bougent : lave qui tombe (avertissement 1,25 s) et geysers ; k, f = position le long du tour, lats = positions latérales successives, P = période (s), ph = premier cycle (s)
+ {P:bspline(PTS.cratere),sm:6,th:TH.eruption,hill:[[5,2,.5],[2,5,1]],haz:[
+  {k:'lava',f:.16,lats:[-4,4,0,5,-5],P:6.4,ph:9},{k:'lava',f:.31,lats:[4,-4,-1,3],P:5.6,ph:11},{k:'geyser',f:.45,lats:[-4.5],P:7.2,ph:10},
+  {k:'lava',f:.58,lats:[0,-5,5,-2],P:6,ph:12},{k:'geyser',f:.70,lats:[4.5],P:6.6,ph:13},{k:'lava',f:.83,lats:[-3,3,5,-5],P:5.8,ph:9.5}]}];
 TRACKS.forEach((t,i)=>{t.n=TRACK_META[i].n;t.e=TRACK_META[i].e});
 
 // ---- Décors : chaque fonction reçoit les positions [x,z,échelle] choisies hors de la route ----
@@ -99,6 +105,7 @@ const DECOR={
   instanced(g,G.box,0xffffff,b.map(([x,z,s],i)=>mtx(x+Math.sin(i)*6.1*s,3*s,z+Math.cos(i)*6.1*s,.5*s,5*s,3*s,i)),.05);
   instanced(g,G.cyl,0x8d5a3b,t.map(([x,z,s])=>mtx(x,2*s,z,.7*s,4*s,.7*s)));instanced(g,G.sph,0x66bb6a,t.map(([x,z,s])=>mtx(x,6*s,z,3.4*s,3.2*s,3.4*s)))},
  oasis(g,pos,rnd,ctx){DECOR.palm(g,pos.filter((_,i)=>i%3),rnd,ctx);DECOR.cactus(g,pos.filter((_,i)=>i%3==0),rnd,ctx)},
+ eruption(g,pos,rnd,ctx){DECOR.rock(g,pos,rnd,ctx);instBasic(g,G.sph,0xff9100,ctx.extra(110,2).map(([x,z],i)=>mtx(x,1+rnd()*14,z,.3)),true);instBasic(g,G.sph,0xff5722,ctx.extra(70,2).map(([x,z])=>mtx(x,1+rnd()*10,z,.22)),true)},
  canyon(g,pos){const cols=[0xd2691e,0xc65a2e,0xe08a4b];cols.forEach((c,k)=>instanced(g,G.cyl,c,pos.filter((_,i)=>i%3==k&&i%7).map(([x,z,s])=>mtx(x,12*s,z,4.2*s,24*s,4.2*s))));
   instanced(g,G.cyl,0x8d4a2b,pos.filter((_,i)=>i%7).map(([x,z,s])=>mtx(x,24.6*s,z,5.4*s,1.8*s,5.4*s)),.08);
   instanced(g,G.cone,0x2e7d32,pos.filter((_,i)=>i%7==0).map(([x,z,s])=>mtx(x,5*s,z,3.4*s,10*s,3.4*s)))}};
@@ -204,9 +211,18 @@ let sc=null,pond=null;
   for(const f of[.2,.62])for(const lat of[-3.2,3.2]){const[x,z,,k]=at2(f,lat),m=mkItemBox();m.position.set(x,sc.H[k]+1.8,z);g.add(m);boxes.push({pos:[x,z],y:sc.H[k],m,on:true,t:0,ph:rnd()*6})}
   [['barrel',.34,-4.8],['oil',.46,3.4],['barrel',.57,4.8],['oil',.74,-3.4]].forEach(([kind,f,lat])=>{const[x,z,,k]=at2(f,lat);let m;if(kind=='barrel')m=mkBarrel(th.barrel);else{m=new THREE.Mesh(G.oil,oilMat(th.oil));m.position.y=.14}m.position.x=x;m.position.y+=sc.H[k];m.position.z=z;g.add(m);obst.push({k:kind,pos:[x,z],y:sc.H[k],m})});
   {const[x,z,h,k]=at2(.92,0),m=new THREE.Mesh(G.pad,PAD_MAT);m.position.set(x,sc.H[k]+.4,z);m.rotation.y=h+Math.PI;g.add(m);pads.push({pos:[x,z],h,y:sc.H[k]})}}
+ // Dangers qui bougent : meshes d'avertissement / de chute ; le cycle est piloté par stepHaz() dans game.js
+ const haz=(def.haz||[]).map(h=>{const lava=h.k=='lava',[x,z,,i]=at(h.f,h.lats[0]),y=H[i],mk=(geo,c,op)=>new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:op,depthWrite:false,side:THREE.DoubleSide}));
+  const ring=mk(new THREE.RingGeometry(.68,1,40).rotateX(-Math.PI/2),lava?0xff3d00:0x80deea,0),disc=mk(new THREE.CircleGeometry(1,32).rotateX(-Math.PI/2),lava?0xd50000:0x4dd0e1,0),crater=mk(new THREE.CircleGeometry(1,24).rotateX(-Math.PI/2),0x2a0f08,0);
+  const beam=mk(G.cyl,lava?0xff5722:0x80deea,0);beam.scale.set(.5,45,.5);beam.position.set(x,y+22,z);g.add(beam);
+  [ring,disc,crater].forEach(m=>{m.position.set(x,y+.5,z);m.scale.set(.01,1,.01);g.add(m)});
+  const fxg=new THREE.Group();fxg.visible=false;g.add(fxg);
+  if(lava){const core=mk(G.sph,0xff6d00,1),glow=mk(G.sph,0xffab00,.4),tail=mk(G.cone,0xff8f00,.55);core.scale.setScalar(2.1);glow.scale.setScalar(3.2);tail.scale.set(1.7,11,1.7);tail.position.y=7;fxg.add(core,glow,tail)}
+  else{const col=mk(G.cyl,0xe1f5fe,.85),top=mk(G.sph,0xffffff,.9);col.position.y=.5;top.scale.setScalar(2.6);fxg.add(col,top);fxg.userData={col,top}}
+  return{k:h.k,f:h.f,lats:h.lats,P:h.P,ph:h.ph,r:lava?4.8:3.4,pos:[x,z],y,idx:i,latT:h.lats[0],ring,disc,crater,beam,fx:fxg,armed:0,c:null,er:-1,cr:0}});
  const bg=canvasTex(256,(x,w,h)=>{const gr=x.createLinearGradient(0,0,0,h);gr.addColorStop(0,th.sky[0]);gr.addColorStop(1,th.sky[1]);x.fillStyle=gr;x.fillRect(0,0,w,h);
   if(th.stars)for(let k=0;k<140;k++){x.fillStyle='rgba(255,255,255,'+(.35+rnd()*.65)+')';const s=1+rnd()*2.2;x.fillRect(rnd()*w,rnd()*h*.78,s,s)}},th.stars?512:4);
- return{def,idx:ti,g,C,T,Nr,at,H,G:G_,wall,zone,bridge,sc,boxes,pads,obst,bg,h0}}
+ return{def,idx:ti,g,C,T,Nr,at,H,G:G_,wall,zone,bridge,sc,boxes,pads,obst,haz,bg,h0}}
 
 // Point du tracé le plus proche (recherche locale autour de l'indice précédent : au croisement on reste sur la bonne branche)
 function nearest(tr,x,z,hint){const C=tr.C;let best=1e9,bi=0;const scan=i=>{const d=(C[i][0]-x)**2+(C[i][1]-z)**2;if(d<best){best=d;bi=i}};

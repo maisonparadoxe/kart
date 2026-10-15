@@ -145,11 +145,13 @@ function pop(p,word,col='#ffeb3b'){if(p.hud){const d=document.createElement('div
 function vib(p,k,x){if(!p.bot)send(p,{t:'fx',k,x})}
 let lastCount=0,lastLeader=null,lastLapSaid=false;
 function hit(p,dur,word,kind,by){if(p.shield>0){if(!p.blockT||now()-p.blockT>1000){p.blockT=now();pop(p,'BLOQUÉ !','#4fc3f7');vib(p,'block');CMT.hit(p,'block',by)}return}
- if(p.safe>0)return;p.spin=dur;p.safe=dur+.8;p.v*=.3;pop(p,word,'#ff5252');vib(p,{bomb:'boom',banana:'slip',oil:'oil'}[kind]||'hit');CMT.hit(p,kind,by)}
+ if(p.safe>0)return;p.spin=dur;p.safe=dur+.8;p.v*=.3;pop(p,word,'#ff5252');vib(p,{bomb:'boom',banana:'slip',oil:'oil',lava:'boom',geyser:'slip'}[kind]||'hit');CMT.hit(p,kind,by)}
 function ai(p,t){const look=Math.round(7+Math.max(0,p.v)*.22),sc=TR.sc;let j=(p.idx+look)%N,lat=Math.sin(t/2600+p.seed)*4,c=TR.C[j],n=TR.Nr[j],tx,tz;
  // Raccourci : sur la branche on la suit ; avant l'embranchement, les bots qui le veulent visent son entrée
  if(sc&&p.br){const k=p.bi+look;if(k<sc.n){tx=sc.C[k][0];tz=sc.C[k][1]}else{j=(sc.b+(k-sc.n+1))%N;c=TR.C[j];n=TR.Nr[j]}}
  else if(sc&&p.wantSc&&p.idx>=sc.a-12&&p.idx<sc.a){const k=Math.min(sc.n-1,Math.max(0,look-(sc.a-p.idx)));tx=sc.C[k][0];tz=sc.C[k][1]}
+ // Dangers annoncés devant : on change de côté (pas parfaitement, comme un humain)
+ if(TR.haz&&tx==null)for(const h of TR.haz)if(h.armed&&((p.seed*7+h.c*13)%1)>.35){const di=(h.idx-p.idx+N)%N;if(di<look+10){const dl=lat-h.latT;if(Math.abs(dl)<6.5)lat=h.latT+(dl>=0?7:-7);lat=Math.max(-(W-2.5),Math.min(W-2.5,lat))}}
  if(tx==null){tx=c[0]+n[0]*lat;tz=c[1]+n[1]*lat}
  let d=Math.atan2(tx-p.pos[0],tz-p.pos[1])-p.h;d=Math.atan2(Math.sin(d),Math.cos(d));
  if(p.item&&!p.aiUse)p.aiUse=t+800+Math.random()*3500;
@@ -169,6 +171,29 @@ function finished(p){const first=racers.find(q=>q.fin==1);
  else if(!p.bot&&p.fin==racers.length)CMT.say('finLast',{n:p.name},1)}
 function boom(x,z,own,y){const m=new THREE.Mesh(G.sph,new THREE.MeshBasicMaterial({color:0xffab00,transparent:true}));m.position.set(x,y+1.5,z);scene.add(m);fx.push({m,t:0});
  for(const p of racers)if(Math.hypot(p.pos[0]-x,p.pos[1]-z)<5.5&&Math.abs(p.y-y)<4)hit(p,1.4,'BOUM !','bomb',own)}
+// ---- Dangers qui bougent (lave qui tombe, geysers) ----
+// Chaque danger a un cycle de période P : avertissement visible dans les dernières secondes, impact à la fin du cycle.
+function splash(x,y,z,col){const m=new THREE.Mesh(G.sph,new THREE.MeshBasicMaterial({color:col,transparent:true}));m.position.set(x,y+1.5,z);scene.add(m);fx.push({m,t:0})}
+function stepHaz(dt,tt,t){for(const h of TR.haz){const lava=h.k=='lava',warn=lava?1.25:1.1;
+  if(tt>=h.ph){const c=Math.floor((tt-h.ph)/h.P),loc=tt-h.ph-c*h.P;if(h.c==null)h.c=c;
+   if(c>h.c){h.c=c;if(h.armed)impactHaz(h)}
+   if(loc>=h.P-warn){if(!h.armed){h.armed=1;h.latT=h.lats[c%h.lats.length];
+    // La lave vise un pilote qui approche (là où il se trouve à l'instant de l'avertissement) : il a 1,25 s pour changer de côté
+    if(lava){const cand=racers.filter(p=>{const d=(h.idx-p.idx+N)%N;return d>=6&&d<=18&&!p.fin});if(cand.length){const q=cand[Math.floor(Math.random()*cand.length)],C=TR.C[q.idx],Nr=TR.Nr[q.idx];h.latT=Math.max(-7,Math.min(7,(q.pos[0]-C[0])*Nr[0]+(q.pos[1]-C[1])*Nr[1]))}}
+    const[x,z]=TR.at(h.f,h.latT);h.pos=[x,z];[h.ring,h.disc,h.crater].forEach(m=>m.position.set(x,h.y+.5,z));h.beam.position.set(x,h.y+22,z);h.beam.scale.set(h.r*.5,45,h.r*.5);h.fx.position.set(x,h.y,z);h.fx.visible=lava;h.crater.material.opacity=0}
+    const u=Math.min(1,(loc-(h.P-warn))/warn),pulse=.55+.35*Math.sin(t/55);
+    h.ring.scale.set(h.r*(.35+.65*u),1,h.r*(.35+.65*u));h.ring.material.opacity=pulse;h.disc.scale.set(h.r*u,1,h.r*u);h.disc.material.opacity=.14+.36*u;h.beam.material.opacity=.1+.14*u;
+    if(lava){h.fx.position.y=h.y+55*(1-u*u);h.fx.rotation.y+=dt*6;h.fx.scale.setScalar(1+.08*Math.sin(t/40))}
+    else{const{col}=h.fx.userData;h.fx.visible=true;col.scale.set(.9,2+2*u,.9);col.position.y=1+u;h.fx.userData.top.position.y=2+2*u}}}
+  // après l'impact : cratère qui s'efface / geyser en éruption
+  if(h.cr>0){h.cr=Math.max(0,h.cr-dt);h.crater.material.opacity=Math.min(.85,h.cr/1.5)}
+  if(h.er>=0){h.er+=dt;const e=h.er,k=e<.2?e/.2:e>.8?Math.max(0,(1-e)/.2):1,{col,top}=h.fx.userData;col.scale.set(1.8*(.6+.4*k),20*k+.1,1.8*(.6+.4*k));col.position.y=10*k;top.position.y=20*k;top.scale.setScalar(2.6+1.4*k);
+   for(const p of racers)if(Math.hypot(p.pos[0]-h.pos[0],p.pos[1]-h.pos[1])<h.r&&Math.abs(p.y-h.y)<4)hit(p,1.0,'PSCHHT !','geyser',null);
+   if(e>1){h.er=-1;h.fx.visible=false}}}}
+function impactHaz(h){h.armed=0;[h.ring,h.disc,h.beam].forEach(m=>m.material.opacity=0);
+ if(h.k=='lava'){h.fx.visible=false;splash(h.pos[0],h.y,h.pos[1],0xff6d00);h.crater.scale.set(h.r*.85,1,h.r*.85);h.cr=4;
+  for(const p of racers)if(Math.hypot(p.pos[0]-h.pos[0],p.pos[1]-h.pos[1])<h.r&&Math.abs(p.y-h.y)<4)hit(p,1.3,'BOUM !','lava',null)}
+ else{h.er=0;splash(h.pos[0],h.y,h.pos[1],0xe1f5fe)}}
 const keys={};
 function step(dt,t){const left=(t0-t)/1000,go=left<=0;
  $('big').textContent=left>3?'':left>0?Math.ceil(left):left>-.9?'PARTEZ !':'';
@@ -226,6 +251,7 @@ function step(dt,t){const left=(t0-t)/1000,go=left<=0;
   h.pos[0]+=Math.sin(h.h)*h.v*dt;h.pos[1]+=Math.cos(h.h)*h.v*dt;h.y=surf(TR,h.pos[0],h.pos[1],i);
   const tgt=racers.find(p=>(p!==h.own||h.ttl<3.6)&&Math.abs(p.y-h.y)<3&&Math.hypot(p.pos[0]-h.pos[0],p.pos[1]-h.pos[1])<2.4);
   if(tgt||h.ttl<=0){h.dead=1;boom(h.pos[0],h.pos[1],h.own,h.y)}}
+ if(go&&TR.haz&&TR.haz.length)stepHaz(dt,(t-t0)/1000,t);
  hz=hz.filter(h=>{if(h.dead)scene.remove(h.m);else{h.m.position.set(h.pos[0],h.y,h.pos[1]);if(h.k=='bomb')h.m.rotation.y+=dt*8}return!h.dead});
  fx=fx.filter(f=>{f.t+=dt;f.m.scale.setScalar(1+f.t*14);f.m.material.opacity=1-f.t/.45;if(f.t>.45)scene.remove(f.m);return f.t<=.45});
  for(const b of TR.boxes){if(!b.on&&t>b.t)b.on=true;b.m.visible=b.on;b.m.rotation.y+=dt*1.5;b.m.position.y=b.y+1.8+Math.sin(t/300+b.ph)*.3}
