@@ -110,7 +110,13 @@ function mkKart(cfg){const g=new THREE.Group(),body=new THREE.Group(),col=cfg.co
  const wheels=[];for(const[x,z,r]of[[-1.25,1.2,0],[1.25,1.2,0],[-1.3,-1.2,1],[1.3,-1.2,1]]){const wh=new THREE.Group();wh.position.set(x*w,r?.68:.58,z);wh.add(...wheelMeshes(r));g.add(wh);wheels.push(wh)}
  const bub=new THREE.Mesh(G.bubble,new THREE.MeshBasicMaterial({color:0x4fc3f7,transparent:true,opacity:.28,depthWrite:false}));bub.position.y=1.2;bub.visible=false;g.add(bub);
  g.rotation.order='YXZ'; // lacet puis tangage (pente)
- g.userData={body,wheels,bub};return g}
+ g.userData={body,wheels,bub,sh};return g}
+
+// ---- Tremplin : coin qui monte dans le sens de la marche (+z), flèches sur la pente ----
+function mkRamp(w,L,h){const g=new THREE.Group(),geo=new THREE.BufferGeometry();
+ geo.setAttribute('position',new THREE.Float32BufferAttribute([-w,0,0, w,0,0, w,h,L, -w,h,L, -w,0,L, w,0,L],3));geo.setIndex([0,2,1,0,3,2, 4,5,2,4,2,3, 0,4,3, 1,2,5]);geo.computeVertexNormals();
+ const m=new THREE.Mesh(geo,new THREE.MeshToonMaterial({color:0xffa000,gradientMap:GRAD,side:THREE.DoubleSide}));m.add(new THREE.Mesh(inkGeo(geo,.12),INK));g.add(m);
+ const tilt=new THREE.Group(),pl=new THREE.Mesh(new THREE.PlaneGeometry(2*w*.86,Math.hypot(L,h)*.9).rotateX(-Math.PI/2),PAD_MAT);pl.rotation.y=Math.PI;tilt.add(pl);tilt.position.set(0,h/2+.07,L/2);tilt.rotation.x=-Math.atan2(h,L);g.add(tilt);return g}
 
 // ---- Objets sur la piste ----
 const BOX_TEX=canvasTex(128,(x,w,h)=>{const gr=x.createLinearGradient(0,0,w,h);['#ff5252','#ffeb3b','#69f0ae','#40c4ff','#e040fb'].forEach((c,i)=>gr.addColorStop(i/4,c));

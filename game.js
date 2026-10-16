@@ -102,7 +102,7 @@ function startRace(){loadTrack(cup[race],true);clearRace();phase='race';fin=0;en
  racers=race==0?[...bots,...players]:standings().reverse();
  const H=TR.h0,fx=Math.sin(H),fz=Math.cos(H),a=TR.C[0];
  racers.forEach((p,k)=>{const lat=(k%2?1:-1)*3.5,bk=6+Math.floor(k/2)*6;
-  Object.assign(p,{h:H,pos:[a[0]-fz*lat-fx*bk,a[1]+fx*lat-fz*bk],v:0,lap:0,fin:0,finT:0,item:null,roll:0,boost:0,spin:0,spinA:0,shield:0,safe:0,maxLap:0,blockT:0,lastI:0,cool:{},aiUse:0,seed:Math.random()*99,cam:null,br:0,bi:0,wantSc:false});
+  Object.assign(p,{h:H,pos:[a[0]-fz*lat-fx*bk,a[1]+fx*lat-fz*bk],v:0,lap:0,fin:0,finT:0,item:null,roll:0,boost:0,spin:0,spinA:0,shield:0,safe:0,maxLap:0,blockT:0,lastI:0,cool:{},aiUse:0,seed:Math.random()*99,cam:null,br:0,bi:0,wantSc:false,air:0,vy:0,gy:0,rp:null,lt:null});
   p.idx=nearest(TR,p.pos[0],p.pos[1])[1];p.y=surf(TR,p.pos[0],p.pos[1],p.idx);p.gr=0;p.wantSc=!!(TR.sc&&p.bot&&Math.random()<.5);p.mesh=mkKart(p.cfg);scene.add(p.mesh)});
  // Chaque joueur garde le même cadre d'écran pendant tout le championnat (ordre d'arrivée dans la partie)
  views=players.filter(p=>racers.includes(p));
@@ -174,6 +174,26 @@ function boom(x,z,own,y){const m=new THREE.Mesh(G.sph,new THREE.MeshBasicMateria
 // ---- Dangers qui bougent (lave qui tombe, geysers) ----
 // Chaque danger a un cycle de période P : avertissement visible dans les dernières secondes, impact à la fin du cycle.
 function splash(x,y,z,col){const m=new THREE.Mesh(G.sph,new THREE.MeshBasicMaterial({color:col,transparent:true}));m.position.set(x,y+1.5,z);scene.add(m);fx.push({m,t:0})}
+// ---- Relief : sol, tremplins, sauts et chutes dans le vide ----
+function launch(p,r){const v=Math.max(p.v,0);p.air=1;p.vy=r.big?.30*v+3:.2*v+2;p.rp=null;p.lt=r;
+ if(r.big){pop(p,'SAUT !','#ffd54f');vib(p,'boost');if(!p.bot&&!p.off)CMT.say('jump',{n:p.name},1)}}
+function landed(p){vib(p,'bonk');if(p.lt&&!p.lt.big&&p.v>8){p.boost=Math.max(p.boost,.7);pop(p,'ZOOM !','#ff9100')}p.lt=null}
+function respawn(p){const sc=TR.sc,onB=p.br&&sc&&sc.gapA!=null,B=onB?sc:TR,k=onB?Math.max(0,sc.gapA-8):(p.idx-12+N)%N,C=B.C[k],T=B.T[k];
+ p.pos=[C[0],C[1]];p.h=Math.atan2(T[0],T[1]);p.v=0;p.air=0;p.vy=0;p.y=B.H[k];p.safe=1.5;p.spin=0;p.boost=0;p.cam=null;p.lt=null;
+ p.idx=onB?Math.round(sc.a+k/(sc.n-1)*(((sc.b-sc.a)+N)%N))%N:k;pop(p,'GLOUPS !','#b388ff');vib(p,'slip');if(!p.fin)CMT.hit(p,'fall',null)}
+function airStep(p,B,bi,d,BW,gr,dt){
+ let gy=Math.max(0,surf(B,p.pos[0],p.pos[1],bi)-Math.max(0,d-(BW+2.1))/1.1);
+ if(B.gapA!=null&&d<BW+2){const T=B.T[bi],sp=bi+((p.pos[0]-B.C[bi][0])*T[0]+(p.pos[1]-B.C[bi][1])*T[1])/2.8;if(sp>B.gapA&&sp<B.gapB)gy=-1e9} // brèche : pas de route (abscisse le long de la branche)
+ for(const r of TR.ramps){if(!p.air&&Math.abs(p.y-r.y)>3.5)continue;const dx=p.pos[0]-r.x,dz=p.pos[1]-r.z,al=dx*r.tx+dz*r.tz,la=-dx*r.tz+dz*r.tx;
+  if(al>=0&&al<=r.L&&Math.abs(la)<=r.w){gy=Math.max(gy,r.y+r.h*al/r.L);p.rp=r}
+  else if(p.rp===r){p.rp=null;if(al>r.L&&!p.air&&Math.abs(la)<=r.w+1&&p.v>4)launch(p,r)}}
+ p.gy=gy;
+ if(p.air){p.vy-=40*dt;p.y+=p.vy*dt;
+  if(gy>-1e8&&p.y<=gy&&p.vy<=0){p.y=gy;p.air=0;p.vy=0;landed(p)}
+  else if(p.y<(B.H?B.H[bi]:0)-9)respawn(p)}
+ else if(gy<-1e8){p.air=1;p.vy=0}
+ else p.y+=(gy-p.y)*Math.min(1,dt*18);
+ p.gr=p.air?0:gr;if(!p.air)p.v-=gr*dt*10}
 function stepHaz(dt,tt,t){for(const h of TR.haz){const lava=h.k=='lava',warn=lava?1.25:1.1;
   if(tt>=h.ph){const c=Math.floor((tt-h.ph)/h.P),loc=tt-h.ph-c*h.P;if(h.c==null)h.c=c;
    if(c>h.c){h.c=c;if(h.armed)impactHaz(h)}
@@ -212,22 +232,22 @@ function step(dt,t){const left=(t0-t)/1000,go=left<=0;
   if(L.br&&bi>=12&&!p.inSc){p.inSc=1;pop(p,'RACCOURCI !','#ffd54f');vib(p,'boost');if(!p.bot&&!p.off)CMT.say('shortcut',{n:p.name},1)}else if(!L.br)p.inSc=0;
   p.br=L.br;p.bi=bi;
   // Murs (ponts, croisements, raccourci) : impossible de quitter la route ou de couper à travers
-  if(B.wall[bi]&&d>BW+1.55){const c=B.C[bi],k=(d-(BW+1.55))/d;p.pos[0]+=(c[0]-p.pos[0])*k;p.pos[1]+=(c[1]-p.pos[1])*k;p.v-=p.v*Math.min(1,dt*2.2);d=BW+1.55}
-  const off=d>BW+1.6,gr=B.G[bi];
+  if(!p.air&&B.wall[bi]&&d>BW+1.55){const c=B.C[bi],k=(d-(BW+1.55))/d;p.pos[0]+=(c[0]-p.pos[0])*k;p.pos[1]+=(c[1]-p.pos[1])*k;p.v-=p.v*Math.min(1,dt*2.2);d=BW+1.55}
+  const off=!p.air&&d>BW+1.6,gr=B.G[bi];
   // Les bots trichent un peu moins quand ils sont loin devant les humains
   let sf=p.bot?p.sf:1;if(p.bot&&views.length){const best=Math.max(...views.map(prog));sf*=prog(p)>best+40?.9:prog(p)<best-60?1.1:1}
   const max=ka.spd*sf*(off?.5:1)*(p.boost>0?1.45:1)*(p.shield>0?1.08:1)*(B.slow||1)*(1-Math.max(-.12,Math.min(.18,gr))*1.6),target=inp.g?max:inp.b?-max*.3:0;
   p.v+=(target-p.v)*Math.min(1,(p.boost>0?4:ka.acc)*dt*(inp.g||inp.b?1:.6));
   if(p.v>max)p.v+=(max-p.v)*Math.min(1,3*dt);
-  p.h-=inp.s*ka.han*dt*Math.max(-1,Math.min(1,p.v/12));
+  p.h-=inp.s*(p.air?.35:1)*ka.han*dt*Math.max(-1,Math.min(1,p.v/12));
   p.pos[0]+=Math.sin(p.h)*p.v*dt;p.pos[1]+=Math.cos(p.h)*p.v*dt;
-  if(d>BW*2.4){const c=B.C[bi],k=(d-BW*2.4)/d;p.pos[0]+=(c[0]-p.pos[0])*k;p.pos[1]+=(c[1]-p.pos[1])*k;p.v*=.9}
+  if(!p.air&&d>BW*2.4){const c=B.C[bi],k=(d-BW*2.4)/d;p.pos[0]+=(c[0]-p.pos[0])*k;p.pos[1]+=(c[1]-p.pos[1])*k;p.v*=.9}
   if(p.idx>N*.8&&i<N*.2){p.lap++;if(p.lap>=2&&p.lap<=LAPS&&p.lap>(p.maxLap||0)){vib(p,p.lap==LAPS?'last':'lap');
     if(p.lap==LAPS&&!p.bot&&!lastLapSaid){lastLapSaid=true;CMT.say('last',{n:p.name},2)}}p.maxLap=Math.max(p.maxLap||0,p.lap)}
   else if(p.idx<N*.2&&i>N*.8)p.lap--;
   p.idx=i;
   // Hauteur : le kart suit la route (et le talus s'il en sort) ; la pente l'accélère ou le ralentit
-  {const yt=Math.max(0,surf(B,p.pos[0],p.pos[1],bi)-Math.max(0,d-(BW+2.1))/1.1);p.y+=(yt-p.y)*Math.min(1,dt*18);p.gr=gr;p.v-=gr*dt*10}
+  airStep(p,B,bi,d,BW,gr,dt);
   if(p.lap>LAPS&&!p.fin){p.fin=++fin;p.finT=t-t0;pop(p,ord(p.fin)+' !','#69f0ae');vib(p,'fin',p.fin);finished(p);
    if(!p.bot&&endAt==Infinity)endAt=t+25000}
   // Boîtes, boosts, obstacles
@@ -259,7 +279,8 @@ function step(dt,t){const left=(t0-t)/1000,go=left<=0;
  const hum=racers.filter(p=>!p.bot);if(hum.length&&hum.every(p=>p.fin))endAt=Math.min(endAt,t+3000);
  if(racers.every(p=>p.fin)||t>endAt)endRace()}
 
-function animate(dt,t){for(const p of racers){const u=p.mesh.userData;p.mesh.position.set(p.pos[0],p.y,p.pos[1]);p.mesh.rotation.y=p.h+p.spinA;p.mesh.rotation.x=-Math.atan(p.gr||0)*.9;
+function animate(dt,t){for(const p of racers){const u=p.mesh.userData;p.mesh.position.set(p.pos[0],p.y,p.pos[1]);p.mesh.rotation.y=p.h+p.spinA;p.mesh.rotation.x=p.air?-Math.atan2(p.vy,Math.max(8,p.v))*.9:-Math.atan(p.gr||0)*.9;
+ if(u.sh){const ah=p.air?Math.max(0,p.y-Math.max(p.gy,p.y-60)):0,void_=p.air&&p.gy<-1e8;u.sh.visible=!void_;u.sh.position.y=.04-(p.air&&!void_?Math.max(0,p.y-p.gy):0);u.sh.scale.setScalar(Math.max(.4,1-(p.air&&!void_?(p.y-p.gy)/14:0)))}
  u.body.position.y=Math.abs(Math.sin(t/70+p.seed))*Math.min(.12,Math.abs(p.v)/250)+(p.spin>0?Math.abs(Math.sin(p.spinA))*.6:0);
  u.body.rotation.z=-(p.in&&!p.bot&&!p.off?p.in.s:0)*.08*Math.min(1,p.v/20);
  u.wheels.forEach(w=>w.rotation.x+=p.v*dt/.6);u.bub.visible=p.shield>0;if(p.shield>0)u.bub.scale.setScalar(1+Math.sin(t/90)*.05)}}
