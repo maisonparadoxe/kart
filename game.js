@@ -12,7 +12,7 @@ function loadTrack(i,force){if(TR&&TR.idx===i&&!force)return;if(TR)scene.remove(
 loadTrack(cup[0]);
 
 // ---- État ----
-const ZERO={s:0,g:0,b:0,i:0};
+const ZERO={s:0,g:0,b:0,i:0,j:0};
 const players=[];      // humains : {pid,conn,off,offAt,seen,name,cfg,ready,in,key,pts}
 let bots=[],racers=[],useBots=true,phase='lobby',race=0,t0=0,fin=0,endAt=Infinity,hz=[],fx=[];
 const BOT_NAMES=['Gédéon','Bérénice','Zaza','Léon','Pépito','Mamie Turbo'];
@@ -55,7 +55,7 @@ function onMsg(c,m){if(!m||typeof m!='object')return;let p=players.find(p=>p.con
   if(phase=='lobby'){p.name=name;p.cfg=cleanCfg(m.cfg);p.ready=!!m.ready}
   sendPhase(p);lobby();return}
  if(!p)return;p.seen=t;
- if(m.t=='in'&&m.v)p.in={s:Math.max(-1,Math.min(1,+m.v.s||0)),g:m.v.g?1:0,b:m.v.b?1:0,i:m.v.i?1:0};
+ if(m.t=='in'&&m.v)p.in={s:Math.max(-1,Math.min(1,+m.v.s||0)),g:m.v.g?1:0,b:m.v.b?1:0,i:m.v.i?1:0,j:m.v.j?1:0};
  else if(m.t=='cfg'&&phase=='lobby'){p.cfg=cleanCfg(m.cfg);p.ready=!!m.ready;if(m.name)p.name=String(m.name).trim().slice(0,12)||p.name;lobby()}
  else if(m.t=='start'&&p===leader())tryStart();
  else if(m.t=='next'&&p===leader())next();
@@ -146,12 +146,18 @@ function pop(p,word,col='#ffeb3b'){if(p.hud){const d=document.createElement('div
 function vib(p,k,x){if(!p.bot)send(p,{t:'fx',k,x})}
 let lastCount=0,lastLeader=null,lastLapSaid=false;
 function hit(p,dur,word,kind,by){if(p.shield>0){if(!p.blockT||now()-p.blockT>1000){p.blockT=now();pop(p,'BLOQUÉ !','#4fc3f7');vib(p,'block');CMT.hit(p,'block',by)}return}
- if(p.safe>0)return;p.spin=dur;p.spinDur=dur;p.spinKind=kind;p.safe=dur+.8;p.v*=.3;pop(p,word,'#ff5252');fxHit(p,kind);vib(p,{bomb:'boom',banana:'slip',oil:'oil',lava:'boom',geyser:'slip'}[kind]||'hit');CMT.hit(p,kind,by)}
+ if(p.safe>0)return;p.dr=0;p.hopT=0;p.spin=dur;p.spinDur=dur;p.spinKind=kind;p.safe=dur+.8;p.v*=.3;pop(p,word,'#ff5252');fxHit(p,kind);vib(p,{bomb:'boom',banana:'slip',oil:'oil',lava:'boom',geyser:'slip'}[kind]||'hit');CMT.hit(p,kind,by)}
 // Effets sur la victime : tremblement de caméra, éclair, particules, petit arrêt sur image pour les explosions
 function fxHit(p,kind){const big=kind=='bomb'||kind=='lava'||kind=='geyser',amp={bomb:1.1,lava:1.1,geyser:.8,ram:.5,banana:.5,oil:.45,bonk:.55}[kind]||.5;
  camHit(p,amp);flashView(p,{bomb:'#ffd180',lava:'#ff8a65',geyser:'#b3e5fc',banana:'#fff59d',oil:'#9575cd'}[kind]||'#fff');
  if(!big)explode(kind,p.pos[0],p.y,p.pos[1]);if(big&&!p.bot&&camK()>.5)hitStop=Math.max(hitStop,FX.hitStop)}
 let hitStop=0;
+const HOP=.55;
+function driftLevel(p){return p.dc>=1.6?2:p.dc>=.8?1:0}
+function endDrift(p){const l=driftLevel(p);p.dr=0;if(l&&p.spin<=0){p.boost=Math.max(p.boost,l==2?1.1:.6);pop(p,'MINI-TURBO !',l==2?'#ff9100':'#4fc3f7');vib(p,'boost')}}
+// Fumée et étincelles aux roues arrière pendant le dérapage (couleur = niveau de charge)
+function driftFx(p,dt){const l=driftLevel(p),fx=Math.sin(p.h),fz=Math.cos(p.h);p.fxT=(p.fxT||0)-dt;if(p.fxT>0)return;p.fxT=.045;
+ for(const s of[-1,1])puff(p.pos[0]-fx*1.5-fz*.9*s,p.y+.3,p.pos[1]-fz*1.5+fx*.9*s,1,{col:l==2?[0xff9100,0xffd54f]:l==1?[0x4fc3f7,0xe1f5fe]:[0xeeeeee,0xbdbdbd],sp:l?3:1.5,up:l?4:1,g:l?14:-1,size:l?[.2,.35]:[.4,.7],life:[.25,.45]})}
 function ai(p,t){const look=Math.round(7+Math.max(0,p.v)*.22),sc=TR.sc;let j=(p.idx+look)%N,lat=Math.sin(t/2600+p.seed)*4,c=TR.C[j],n=TR.Nr[j],tx,tz;
  // Raccourci : sur la branche on la suit ; avant l'embranchement, les bots qui le veulent visent son entrée
  if(sc&&p.br){const k=p.bi+look;if(k<sc.n){tx=sc.C[k][0];tz=sc.C[k][1]}else{j=(sc.b+(k-sc.n+1))%N;c=TR.C[j];n=TR.Nr[j]}}
@@ -162,7 +168,7 @@ function ai(p,t){const look=Math.round(7+Math.max(0,p.v)*.22),sc=TR.sc;let j=(p.
  let d=Math.atan2(tx-p.pos[0],tz-p.pos[1])-p.h;d=Math.atan2(Math.sin(d),Math.cos(d));
  if(p.item&&!p.aiUse)p.aiUse=t+800+Math.random()*3500;
  const use=p.item&&t>p.aiUse;if(use)p.aiUse=0;
- return{s:Math.max(-1,Math.min(1,-d*2.6)),g:1,b:Math.abs(d)>1.1?1:0,i:use?1:0}}
+ return{s:Math.max(-1,Math.min(1,-d*2.6)),g:1,b:Math.abs(d)>1.1?1:0,i:use?1:0,j:0}}
 function pickItem(p){const r=racers.length>1?(rankOf(p)-1)/(racers.length-1):0,w={banana:4-3*r,bomb:1.5+1.5*r,pepper:1+4*r,shield:.4+2*r};
  let x=Math.random()*Object.values(w).reduce((a,b)=>a+b);for(const k in w)if((x-=w[k])<0)return k;return'banana'}
 function useItem(p,t){const it=p.item;p.item=null;vib(p,'use',it);const fx=Math.sin(p.h),fz=Math.cos(p.h);
@@ -228,7 +234,7 @@ function step(dt,t){const left=(t0-t)/1000,go=left<=0;
  $('big').textContent=left>3?'':left>0?Math.ceil(left):left>-.9?'PARTEZ !':'';
  const cnt=left>3?0:left>0?Math.ceil(left):-1;if(cnt!=lastCount){if(cnt>0)SFX.lib.count();else if(cnt<0&&lastCount>0)SFX.lib.go();lastCount=cnt}
  for(const p of racers){
-  if(p.key&&!p.fin)p.in={s:(keys.ArrowRight?1:0)-(keys.ArrowLeft?1:0),g:keys.ArrowUp?1:0,b:keys.ArrowDown?1:0,i:keys.Space?1:0};
+  if(p.key&&!p.fin)p.in={s:(keys.ArrowRight?1:0)-(keys.ArrowLeft?1:0),g:keys.ArrowUp?1:0,b:keys.ArrowDown?1:0,i:keys.Space?1:0,j:(keys.KeyZ||keys.ShiftLeft)?1:0};
   // Bots, joueurs déconnectés et joueurs arrivés : pilote automatique
   let inp=!go?ZERO:(p.bot||p.off||p.fin)?ai(p,t):p.in;
   const ka=KARTS[p.cfg.ka];
@@ -236,6 +242,12 @@ function step(dt,t){const left=(t0-t)/1000,go=left<=0;
   if(p.spin>0){p.spin=Math.max(0,p.spin-dt);p.spinA+=dt*16;inp=ZERO}else p.spinA=0;
   if(p.roll&&t>p.roll){p.roll=0;p.item=pickItem(p);vib(p,'got')}
   if(inp.i&&!p.lastI&&p.item&&!p.roll)useItem(p,t);p.lastI=inp.i;
+  // SAUT : petit bond (évite bananes, huile, bombe en contact) ; bond + direction + bouton maintenu = dérapage, mini-turbo au relâchement
+  p.hopCd=Math.max(0,(p.hopCd||0)-dt);if(p.spin>0)p.hopT=0;
+  if(inp.j&&!p.lastJ&&!p.air&&!(p.hopT>0)&&p.hopCd<=0&&p.v>6&&p.spin<=0){p.hopT=HOP;p.hopDir=Math.abs(inp.s)>.3?Math.sign(inp.s):0;vib(p,'hop');puff(p.pos[0],p.y+.3,p.pos[1],4,{col:[0xe0e0e0,0xbdbdbd],sp:3,up:1.5,g:-1,size:[.3,.5],life:[.25,.4]})}
+  p.lastJ=inp.j;
+  if(p.hopT>0){p.hopT-=dt;if(p.hopT<=0){p.hopT=0;p.hopCd=.5;if(p.hopDir&&inp.j&&p.v>12){p.dr=p.hopDir;p.dc=0}}}
+  p.hy=p.hopT>0?1.8*Math.sin(Math.PI*(1-p.hopT/HOP)):0;
   const L=locate(TR,p),B=L.br?TR.sc:TR,bi=L.br?L.bi:L.i,BW=B.w||W,i=L.i;let d=L.d;
   // « Raccourci ! » seulement une fois vraiment engagé dans le couloir (pas à l'embranchement où les deux routes se chevauchent)
   if(L.br&&bi>=12&&!p.inSc){p.inSc=1;pop(p,'RACCOURCI !','#ffd54f');vib(p,'boost');if(!p.bot&&!p.off)CMT.say('shortcut',{n:p.name},1)}else if(!L.br)p.inSc=0;
@@ -245,11 +257,13 @@ function step(dt,t){const left=(t0-t)/1000,go=left<=0;
   const off=!p.air&&d>BW+1.6,gr=B.G[bi];
   // Les bots trichent un peu moins quand ils sont loin devant les humains
   let sf=p.bot?p.sf:1;if(p.bot&&views.length){const best=Math.max(...views.map(prog));sf*=prog(p)>best+40?.9:prog(p)<best-60?1.1:1}
-  p.st=inp.s;const rbm=catchup(p,t);p.rb=rbm-1;
-  const max=ka.spd*sf*rbm*(off?.5:1)*(p.boost>0?1.45:1)*(p.shield>0?1.08:1)*(B.slow||1)*(1-Math.max(-.12,Math.min(.18,gr))*1.6),target=inp.g?max:inp.b?-max*.3:0;
+  if(p.dr&&(!inp.j||p.v<10||p.air||off||p.spin>0))endDrift(p);
+  p.st=p.dr?p.dr:inp.s;const rbm=catchup(p,t);p.rb=rbm-1;
+  const max=ka.spd*sf*rbm*(off?.5:1)*(p.boost>0?1.45:1)*(p.shield>0?1.08:1)*(p.dr?.97:1)*(B.slow||1)*(1-Math.max(-.12,Math.min(.18,gr))*1.6),target=inp.g?max:inp.b?-max*.3:0;
   p.v+=(target-p.v)*Math.min(1,(p.boost>0?4:ka.acc)*dt*(inp.g||inp.b?1:.6));
   if(p.v>max)p.v+=(max-p.v)*Math.min(1,3*dt);
-  p.h-=inp.s*(p.air?.35:1)*ka.han*dt*Math.max(-1,Math.min(1,p.v/12));
+  let sE=inp.s,tm=1;if(p.dr){sE=p.dr*(.75+.5*clamp(inp.s*p.dr,-1,1));tm=1.25;p.dc+=dt;driftFx(p,dt)}
+  p.h-=sE*tm*(p.air?.35:1)*ka.han*dt*Math.max(-1,Math.min(1,p.v/12));
   p.pos[0]+=Math.sin(p.h)*p.v*dt;p.pos[1]+=Math.cos(p.h)*p.v*dt;
   if(!p.air&&d>BW*2.4){const c=B.C[bi],k=(d-BW*2.4)/d;p.pos[0]+=(c[0]-p.pos[0])*k;p.pos[1]+=(c[1]-p.pos[1])*k;p.v*=.9}
   if(p.idx>N*.8&&i<N*.2){p.lap++;if(p.lap>=2&&p.lap<=LAPS&&p.lap>(p.maxLap||0)){vib(p,p.lap==LAPS?'last':'lap');
@@ -267,8 +281,8 @@ function step(dt,t){const left=(t0-t)/1000,go=left<=0;
   for(const o of TR.obst){const dx=p.pos[0]-o.pos[0],dz=p.pos[1]-o.pos[1],dd=Math.hypot(dx,dz);
    if(Math.abs(o.y-p.y)>3.4)continue;
    if(o.k=='barrel'&&dd<2.5){p.pos[0]=o.pos[0]+dx/dd*2.5;p.pos[1]=o.pos[1]+dz/dd*2.5;if(p.v>8){p.v*=.3;pop(p,'BONK !','#ffeb3b');vib(p,'bonk');CMT.hit(p,'bonk',null)}}
-   else if(o.k=='oil'&&dd<2.2)hit(p,.9,'SPLOTCH !','oil',null)}
-  for(const h of hz)if(h.k=='banana'&&!h.dead&&Math.abs(h.y-p.y)<3&&Math.hypot(p.pos[0]-h.pos[0],p.pos[1]-h.pos[1])<1.9){h.dead=1;hit(p,1.1,'SPLAT !','banana',h.own)}}
+   else if(o.k=='oil'&&dd<2.2&&!(p.hy>.6))hit(p,.9,'SPLOTCH !','oil',null)}
+  for(const h of hz)if(h.k=='banana'&&!h.dead&&!(p.hy>.6)&&Math.abs(h.y-p.y)<3&&Math.hypot(p.pos[0]-h.pos[0],p.pos[1]-h.pos[1])<1.9){h.dead=1;hit(p,1.1,'SPLAT !','banana',h.own)}}
  // Changement de leader (seulement si un humain est concerné)
  if(left<-4){const L=racers.reduce((a,b)=>prog(b)>prog(a)?b:a);if(lastLeader&&L!==lastLeader&&!L.fin&&(!L.bot||!lastLeader.bot))CMT.say('lead',{n:L.name},L.bot?1:2);lastLeader=L}
  // Chocs entre karts
@@ -279,7 +293,7 @@ function step(dt,t){const left=(t0-t)/1000,go=left<=0;
  for(const h of hz)if(h.k=='bomb'&&!h.dead){h.ttl-=dt;const[,i]=nearest(TR,h.pos[0],h.pos[1],h.idx);h.idx=i;const c=TR.C[(i+5)%N];
   let d=Math.atan2(c[0]-h.pos[0],c[1]-h.pos[1])-h.h;d=Math.atan2(Math.sin(d),Math.cos(d));h.h+=Math.max(-3*dt,Math.min(3*dt,d));
   h.pos[0]+=Math.sin(h.h)*h.v*dt;h.pos[1]+=Math.cos(h.h)*h.v*dt;h.y=surf(TR,h.pos[0],h.pos[1],i);
-  const tgt=racers.find(p=>(p!==h.own||h.ttl<3.6)&&Math.abs(p.y-h.y)<3&&Math.hypot(p.pos[0]-h.pos[0],p.pos[1]-h.pos[1])<2.4);
+  const tgt=racers.find(p=>(p!==h.own||h.ttl<3.6)&&!(p.hy>.6)&&Math.abs(p.y-h.y)<3&&Math.hypot(p.pos[0]-h.pos[0],p.pos[1]-h.pos[1])<2.4);
   if(tgt||h.ttl<=0){h.dead=1;boom(h.pos[0],h.pos[1],h.own,h.y)}}
  if(go&&TR.haz&&TR.haz.length)stepHaz(dt,(t-t0)/1000,t);
  hz=hz.filter(h=>{if(h.dead)scene.remove(h.m);else{h.m.position.set(h.pos[0],h.y,h.pos[1]);if(h.k=='bomb')h.m.rotation.y+=dt*8}return!h.dead});
@@ -293,7 +307,7 @@ function animate(dt,t){for(const p of racers){const u=p.mesh.userData;p.mesh.pos
  if(u.sh){const ah=p.air?Math.max(0,p.y-Math.max(p.gy,p.y-60)):0,void_=p.air&&p.gy<-1e8;u.sh.visible=!void_;u.sh.position.y=.04-(p.air&&!void_?Math.max(0,p.y-p.gy):0);u.sh.scale.setScalar(Math.max(.4,1-(p.air&&!void_?(p.y-p.gy)/14:0)))}
  const blast=p.spin>0&&(p.spinKind=='bomb'||p.spinKind=='lava'||p.spinKind=='geyser'),pf=p.spin>0&&p.spinDur?1-p.spin/p.spinDur:0;
  u.body.position.y=Math.abs(Math.sin(t/70+p.seed))*Math.min(.12,Math.abs(p.v)/250)+(blast?Math.sin(Math.PI*pf)*(p.spinKind=='geyser'?4.5:2.6):p.spin>0?Math.abs(Math.sin(p.spinA))*.6:0);
- u.body.rotation.x=blast?-pf*Math.PI*2:0;animStars(u,p,dt,t);
+ u.body.rotation.x=blast?-pf*Math.PI*2:0;u.body.position.y+=p.hy||0;u.da=(u.da||0)+(((p.dr||0)*-.35)-(u.da||0))*Math.min(1,dt*10);u.body.rotation.y=u.da;animStars(u,p,dt,t);
  u.body.rotation.z=-(p.in&&!p.bot&&!p.off?p.in.s:0)*.08*Math.min(1,p.v/20);
  u.wheels.forEach(w=>w.rotation.x+=p.v*dt/.6);u.bub.visible=p.shield>0;if(p.shield>0)u.bub.scale.setScalar(1+Math.sin(t/90)*.05)}}
 

@@ -78,7 +78,7 @@ button{background:#e53935;color:#fff;font-size:26px;box-shadow:3px 3px 0 var(--i
 <div class="b pill" data-k=h style="left:2vw;top:4vh;background:#ff9800">🔊 Cri !</div><div class="b pill" data-k=b style="left:2vw;top:17vh">Frein</div>
 <div class="b pill" data-k=i style="right:2vw;top:4vh">🎁 Objet</div><div class="b pill" data-k=g style="right:2vw;top:17vh;background:#2e7d32">Gaz</div>
 <div class=g style="left:18vw"><div class="b u" data-k=g>▲</div><div class="b d" data-k=b>▼</div><div class="b l" data-k=l>◀</div><div class="b r" data-k=r>▶</div></div>
-<div class=g style="left:82vw"><div class="b u" data-k=i style="background:#a89a00">🎁</div><div class="b d" data-k=g style="background:#2e7d32">A</div><div class="b l" data-k=i style="background:#1e88e5">🎁</div><div class="b r" data-k=b style="background:#c62828">B</div></div>
+<div class=g style="left:82vw"><div class="b u" data-k=i style="background:#a89a00">🎁</div><div class="b d" data-k=g style="background:#2e7d32">A</div><div class="b l" data-k=j style="background:#1e88e5;font-size:2.2vh">SAUT</div><div class="b r" data-k=b style="background:#c62828">B</div></div>
 <div id=info><div id=ipos></div><div id=islot></div><div id=ilap></div></div>
 <div id=rot>🔄 Tourne ton téléphone en paysage</div></section>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -208,17 +208,17 @@ function onData(m){if(!m||typeof m!='object')return;
    $('rs').innerHTML=last?`${m.pts} points au total`:`+${m.gain} pts — total ${m.pts} pts<br>Classement général : ${ord(m.rank)}/${m.n}`;
    $('nextb').style.display=lead?'block':'none';$('nextb').textContent=last?'▶ Retour au garage':m.race+1>=m.nr?'🏆 Voir le podium':'▶ Course suivante'}}
  else if(m.t=='st'){if(phase=='race'){SFX.engine.start(cfg.ka);SFX.engine.set(m.v||0,m.bo)}$('ipos').innerHTML=m.fin?'🏁':m.rk+(m.rk==1?'<sup>er</sup>':'<sup>e</sup>');$('islot').textContent=m.it||'';$('islot').style.opacity=m.it?1:.4;$('ilap').textContent=m.fin?ord(m.fin)+' !':`Tour ${m.lap}/${m.laps}`}
- else if(m.t=='fx'){const H=[80,40,160],v={hit:H,boom:[150,50,250],slip:H,oil:H,bonk:60,roll:30,boost:[40,30,40],block:40,fin:[100,60,100,60,300]}[m.k];navigator.vibrate&&v&&navigator.vibrate(v);
+ else if(m.t=='fx'){const H=[80,40,160],v={hit:H,boom:[150,50,250],slip:H,oil:H,bonk:60,hop:20,roll:30,boost:[40,30,40],block:40,fin:[100,60,100,60,300]}[m.k];navigator.vibrate&&v&&navigator.vibrate(v);
   const L=SFX.lib;if(m.k=='use'){L[m.x]&&L[m.x]()}else if(m.k=='fin')L.fin(m.x);else if(L[m.k])L[m.k]()}
  else if(m.t=='replaced'){stopped=true;drop();stopInputs();banner('');show('s0');$('st').textContent='Ce téléphone s’est connecté ailleurs (autre onglet ?). Appuie sur Rejoindre pour reprendre ici.'}
  else if(m.t=='full'){stopped=true;drop();banner('');show('s0');$('st').textContent=m.why||'Partie pleine.'}}
 
 // ---- Commandes ----
-const K={l:0,r:0,g:0,b:0,i:0,s:0};
-function startInputs(){if(inT)return;inT=setInterval(()=>{K.s+=Math.max(-.25,Math.min(.25,K.r-K.l-K.s));tx({t:'in',v:{s:K.s,g:K.g,b:K.b,i:K.i}})},33)}
+const K={l:0,r:0,g:0,b:0,i:0,j:0,s:0};
+function startInputs(){if(inT)return;inT=setInterval(()=>{K.s+=Math.max(-.25,Math.min(.25,K.r-K.l-K.s));tx({t:'in',v:{s:K.s,g:K.g,b:K.b,i:K.i,j:K.j}})},33)}
 function stopInputs(){clearInterval(inT);inT=0;SFX.engine.stop()}
 let hornT=0;const horn=()=>{const t=Date.now();if(t-hornT<700)return;hornT=t;SFX.cry(CHARS[cfg.ch].k);navigator.vibrate&&navigator.vibrate(60);tx({t:'horn'})};
-document.querySelectorAll('.b').forEach(b=>{const k=b.dataset.k,set=v=>{K[k]=v;b.classList.toggle('dn',!!v);if(v&&k=='i')navigator.vibrate&&navigator.vibrate(40);if(v&&k=='h')horn()};
+document.querySelectorAll('.b').forEach(b=>{const k=b.dataset.k,set=v=>{K[k]=v;b.classList.toggle('dn',!!v);if(v&&(k=='i'||k=='j'))navigator.vibrate&&navigator.vibrate(k=='j'?25:40);if(v&&k=='h')horn()};
  b.addEventListener('pointerdown',e=>{e.preventDefault();try{b.setPointerCapture(e.pointerId)}catch(x){}set(1)});
  ['pointerup','pointercancel','lostpointercapture'].forEach(t=>b.addEventListener(t,()=>set(0)))});
 document.addEventListener('contextmenu',e=>e.preventDefault());

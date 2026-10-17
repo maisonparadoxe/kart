@@ -27,6 +27,7 @@ const SFX=(()=>{let ctx=null,master=null,musicBus=null,on=true,nbuf=null;
   oil:()=>{noise(.35,{v:.25,f:300,type:'lowpass'});tone(260,.4,{type:'sine',v:.15,f2:60})},
   boom:()=>{noise(.9,{v:.45,f:500,f2:50,type:'lowpass'});tone(110,.7,{type:'sine',v:.35,f2:28})},
   bonk:()=>{tone(170,.18,{type:'triangle',v:.3,f2:80});noise(.07,{v:.15,f:600})},
+  hop:()=>{tone(260,.14,{type:'square',v:.05,f2:520})},
   boost:()=>{tone(180,.6,{type:'sawtooth',v:.08,f2:900});noise(.55,{v:.08,f:1500,f2:6000})},
   banana:()=>tone(520,.12,{type:'sine',v:.2,f2:240}),
   bomb:()=>{noise(.35,{v:.15,f:400,f2:3000});tone(300,.3,{type:'triangle',v:.08,f2:900})},
