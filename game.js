@@ -8,7 +8,7 @@ const sun=new THREE.DirectionalLight(0xffffff,.75);sun.position.set(60,120,40);s
 scene.add(PM); // particules (fx.js)
 let TR=null,cup=DEFAULT_CUP.slice();
 const randomCup=()=>TRACK_META.map((_,i)=>i).sort(()=>Math.random()-.5).slice(0,CUP_LEN);
-function loadTrack(i,force){if(TR&&TR.idx===i&&!force)return;if(TR)scene.remove(TR.g);TR=buildTrack(TRACKS[i],i);scene.add(TR.g);scene.background=TR.bg;scene.fog=new THREE.Fog(TR.def.th.fog,160,520)}
+function loadTrack(i,force){if(TR&&TR.idx===i&&!force)return;if(TR)scene.remove(TR.g);TR=buildTrack(TRACKS[i],i);scene.add(TR.g);scene.background=TR.bg;scene.fog=new THREE.Fog(TR.def.th.fog,160,520);if(TR.cross.length)stepCross(-1,0)}
 loadTrack(cup[0]);
 
 // ---- État ----
@@ -158,17 +158,33 @@ function endDrift(p){const l=driftLevel(p);p.dr=0;if(l&&p.spin<=0){p.boost=Math.
 // Fumée et étincelles aux roues arrière pendant le dérapage (couleur = niveau de charge)
 function driftFx(p,dt){const l=driftLevel(p),fx=Math.sin(p.h),fz=Math.cos(p.h);p.fxT=(p.fxT||0)-dt;if(p.fxT>0)return;p.fxT=.045;
  for(const s of[-1,1])puff(p.pos[0]-fx*1.5-fz*.9*s,p.y+.3,p.pos[1]-fz*1.5+fx*.9*s,1,{col:l==2?[0xff9100,0xffd54f]:l==1?[0x4fc3f7,0xe1f5fe]:[0xeeeeee,0xbdbdbd],sp:l?3:1.5,up:l?4:1,g:l?14:-1,size:l?[.2,.35]:[.4,.7],life:[.25,.45]})}
+// ---- Décor qui traverse : attend au bord (avec « ! » juste avant), traverse la route, attend de l'autre côté, repart dans l'autre sens ----
+function stepCross(tt,t){for(const c of TR.cross){const u0=(tt-c.ph)/c.P,cy=u0<0?0:Math.floor(u0),u=u0<0?0:u0-cy,s=cy%2?1:-1,L=W+3.6;
+  const k=u<=c.w0?0:u>=c.w1?1:(u-c.w0)/(c.w1-c.w0);c.lat=s*L*(1-2*k);c.moving=u0>=0&&u>c.w0&&u<c.w1;c.warn=u0>=0&&u>c.w0-.16&&u<=c.w0;
+  const Nr=TR.Nr[c.idx],dx=-s*Nr[0],dz=-s*Nr[1],[x,z,,i]=TR.at(c.f,c.lat),gap=2.6;c.onRoad=Math.abs(c.lat)<W+1.4;
+  c.mp.length=0;for(let m=0;m<c.n;m++)c.mp.push([x-dx*gap*m,z-dz*gap*m]);
+  const g=c.m,bob=c.moving?Math.abs(Math.sin(t/(c.k=='snail'?260:110)))*(c.k=='snail'?.12:.45):c.warn?Math.abs(Math.sin(t/90))*.7:0;
+  g.position.set(x,TR.H[i]+bob,z);g.rotation.y=Math.atan2(dx,dz);g.userData.ex.visible=c.warn&&Math.sin(t/70)>-.3;g.userData.ex.rotation.y=-g.rotation.y;
+  g.visible=true}}
+const CROSS_HIT={duck:[.7,'COIN-COIN !'],cow:[1.2,'MEUH !'],snail:[.6,'SCHLOUP !']};
 function ai(p,t){const look=Math.round(7+Math.max(0,p.v)*.22),sc=TR.sc;let j=(p.idx+look)%N,lat=Math.sin(t/2600+p.seed)*4,c=TR.C[j],n=TR.Nr[j],tx,tz;
  // Raccourci : sur la branche on la suit ; avant l'embranchement, les bots qui le veulent visent son entrée
  if(sc&&p.br){const k=p.bi+look;if(k<sc.n){tx=sc.C[k][0];tz=sc.C[k][1]}else{j=(sc.b+(k-sc.n+1))%N;c=TR.C[j];n=TR.Nr[j]}}
  else if(sc&&p.wantSc&&p.idx>=sc.a-12&&p.idx<sc.a){const k=Math.min(sc.n-1,Math.max(0,look-(sc.a-p.idx)));tx=sc.C[k][0];tz=sc.C[k][1]}
  // Dangers annoncés devant : on change de côté (pas parfaitement, comme un humain)
  if(TR.haz&&tx==null)for(const h of TR.haz)if(h.armed&&((p.seed*7+h.c*13)%1)>.35){const di=(h.idx-p.idx+N)%N;if(di<look+10){const dl=lat-h.latT;if(Math.abs(dl)<6.5)lat=h.latT+(dl>=0?7:-7);lat=Math.max(-(W-2.5),Math.min(W-2.5,lat))}}
- if(tx==null){tx=c[0]+n[0]*lat;tz=c[1]+n[1]*lat}
+ const direct=tx!=null;if(tx==null){tx=c[0]+n[0]*lat;tz=c[1]+n[1]*lat}
  let d=Math.atan2(tx-p.pos[0],tz-p.pos[1])-p.h;d=Math.atan2(Math.sin(d),Math.cos(d));
  if(p.item&&!p.aiUse)p.aiUse=t+800+Math.random()*3500;
  const use=p.item&&t>p.aiUse;if(use)p.aiUse=0;
- return{s:Math.max(-1,Math.min(1,-d*2.6)),g:1,b:Math.abs(d)>1.1?1:0,i:use?1:0,j:0}}
+ // Animal qui traverse devant : on s'arrête s'il est sur le point de partir, on le contourne pendant qu'il traverse (sauf quelques têtes brûlées) ; trous : on change de côté
+ let wait=0,mv=0;
+ if(!direct){
+  if(TR.cross&&((p.seed*3)%1)>.3)for(const c of TR.cross){const di=(c.idx-p.idx+N)%N;if(di>1&&di<look+7){
+   if(c.warn)wait=1;else if(c.moving&&c.onRoad){const sd=((p.seed*11)%1)>.5?1:-1;let l2=c.lat+sd*(c.r+3.5);if(Math.abs(l2)>W-2.5)l2=c.lat-sd*(c.r+3.5);if(Math.abs(l2)>W-2.5)wait=1;else{lat=l2;mv=1}}}}
+  for(const o of TR.obst)if(o.k=='hole'&&((p.seed*5+o.idx*.37)%1)>.15){const di=(o.idx-p.idx+N)%N;if(di<look+12&&Math.abs(lat-o.lat)<5){lat=Math.max(-(W-2.5),Math.min(W-2.5,o.lat+(o.lat>=0?-6:6)));mv=1}}
+  if(mv){tx=c[0]+n[0]*lat;tz=c[1]+n[1]*lat;d=Math.atan2(tx-p.pos[0],tz-p.pos[1])-p.h;d=Math.atan2(Math.sin(d),Math.cos(d))}}
+ return{s:Math.max(-1,Math.min(1,-d*2.6)),g:wait?0:1,b:Math.abs(d)>1.1||(wait&&p.v>22)?1:0,i:use?1:0,j:0}}
 function pickItem(p){const r=racers.length>1?(rankOf(p)-1)/(racers.length-1):0,w={banana:4-3*r,bomb:1.5+1.5*r,pepper:1+4*r,shield:.4+2*r};
  let x=Math.random()*Object.values(w).reduce((a,b)=>a+b);for(const k in w)if((x-=w[k])<0)return k;return'banana'}
 function useItem(p,t){const it=p.item;p.item=null;vib(p,'use',it);const fx=Math.sin(p.h),fz=Math.cos(p.h);
@@ -233,6 +249,7 @@ const keys={};
 function step(dt,t){const left=(t0-t)/1000,go=left<=0;
  $('big').textContent=left>3?'':left>0?Math.ceil(left):left>-.9?'PARTEZ !':'';
  const cnt=left>3?0:left>0?Math.ceil(left):-1;if(cnt!=lastCount){if(cnt>0)SFX.lib.count();else if(cnt<0&&lastCount>0)SFX.lib.go();lastCount=cnt}
+ if(TR.cross.length)stepCross(go?(t-t0)/1000:-1,t);
  for(const p of racers){
   if(p.key&&!p.fin)p.in={s:(keys.ArrowRight?1:0)-(keys.ArrowLeft?1:0),g:keys.ArrowUp?1:0,b:keys.ArrowDown?1:0,i:keys.Space?1:0,j:(keys.KeyZ||keys.ShiftLeft)?1:0};
   // Bots, joueurs déconnectés et joueurs arrivés : pilote automatique
@@ -243,7 +260,7 @@ function step(dt,t){const left=(t0-t)/1000,go=left<=0;
   if(p.roll&&t>p.roll){p.roll=0;p.item=pickItem(p);vib(p,'got')}
   if(inp.i&&!p.lastI&&p.item&&!p.roll)useItem(p,t);p.lastI=inp.i;
   // SAUT : petit bond (évite bananes, huile, bombe en contact) ; bond + direction + bouton maintenu = dérapage, mini-turbo au relâchement
-  p.hopCd=Math.max(0,(p.hopCd||0)-dt);if(p.spin>0)p.hopT=0;
+  p.hopCd=Math.max(0,(p.hopCd||0)-dt);p.hl=Math.max(0,(p.hl||0)-dt);if(p.spin>0)p.hopT=0;
   if(inp.j&&!p.lastJ&&!p.air&&!(p.hopT>0)&&p.hopCd<=0&&p.v>6&&p.spin<=0){p.hopT=HOP;p.hopDir=Math.abs(inp.s)>.3?Math.sign(inp.s):0;vib(p,'hop');puff(p.pos[0],p.y+.3,p.pos[1],4,{col:[0xe0e0e0,0xbdbdbd],sp:3,up:1.5,g:-1,size:[.3,.5],life:[.25,.4]})}
   p.lastJ=inp.j;
   if(p.hopT>0){p.hopT-=dt;if(p.hopT<=0){p.hopT=0;p.hopCd=.5;if(p.hopDir&&inp.j&&p.v>12){p.dr=p.hopDir;p.dc=0}}}
@@ -281,7 +298,9 @@ function step(dt,t){const left=(t0-t)/1000,go=left<=0;
   for(const o of TR.obst){const dx=p.pos[0]-o.pos[0],dz=p.pos[1]-o.pos[1],dd=Math.hypot(dx,dz);
    if(Math.abs(o.y-p.y)>3.4)continue;
    if(o.k=='barrel'&&dd<2.5){p.pos[0]=o.pos[0]+dx/dd*2.5;p.pos[1]=o.pos[1]+dz/dd*2.5;if(p.v>8){p.v*=.3;pop(p,'BONK !','#ffeb3b');vib(p,'bonk');CMT.hit(p,'bonk',null)}}
+   else if(o.k=='hole'&&dd<2.4&&!p.air&&!(p.hy>.6)&&!(p.hl>0)){p.hl=2.5;hit(p,.8,'GLOUPS !','hole',null)}
    else if(o.k=='oil'&&dd<2.2&&!(p.hy>.6))hit(p,.9,'SPLOTCH !','oil',null)}
+  if(TR.cross)for(const c of TR.cross)if(c.onRoad&&Math.abs(TR.H[c.idx]-p.y)<3.4&&!(c.hop&&Math.max(p.hy||0,p.y-TR.H[c.idx])>.6))for(const m of c.mp)if(Math.hypot(p.pos[0]-m[0],p.pos[1]-m[1])<c.r){const[dur,w]=CROSS_HIT[c.k];hit(p,dur,w,c.k,null);break}
   for(const h of hz)if(h.k=='banana'&&!h.dead&&!(p.hy>.6)&&Math.abs(h.y-p.y)<3&&Math.hypot(p.pos[0]-h.pos[0],p.pos[1]-h.pos[1])<1.9){h.dead=1;hit(p,1.1,'SPLAT !','banana',h.own)}}
  // Changement de leader (seulement si un humain est concerné)
  if(left<-4){const L=racers.reduce((a,b)=>prog(b)>prog(a)?b:a);if(lastLeader&&L!==lastLeader&&!L.fin&&(!L.bot||!lastLeader.bot))CMT.say('lead',{n:L.name},L.bot?1:2);lastLeader=L}

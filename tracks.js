@@ -50,17 +50,17 @@ const TH={ // th : sky[haut,bas] fog gnd spot road[2] kerb[2] hill decor + optio
  canyon:{sky:['#4dd0e1','#ffe0b2'],fog:0xffe0b2,gnd:0xd7a26a,spot:0xc98a52,road:[0x6d5a4a,0x786452],kerb:[0xffffff,0xbf360c],hill:0xbf6a3a,decor:'canyon',skirt:0xc98a52,rail:[0xbf360c,0xffffff]}};
 // hill : [[amplitude, ondulations par tour, phase],…]
 const TRACKS=[
- {P:t=>[135*Math.cos(t)+14*Math.cos(3*t),88*Math.sin(t)+14*Math.sin(2*t)],sm:4,th:TH.prairie,hill:[[3,2,0]]},
+ {P:t=>[135*Math.cos(t)+14*Math.cos(3*t),88*Math.sin(t)+14*Math.sin(2*t)],sm:4,th:TH.prairie,hill:[[3,2,0]],ramps:2,cross:[{k:'duck',f:.3,P:9,ph:3,w0:.5,w1:.82},{k:'duck',f:.72,P:10,ph:6,w0:.5,w1:.82}],holes:[[.46,-3.5],[.58,4],[.9,0]]},
  {P:t=>{const r=120+28*Math.sin(3*t);return[r*Math.cos(t)*1.15,r*Math.sin(t)*.85]},sm:0,th:TH.desert,hill:[[5,3,1]]},
  {P:t=>[150*Math.cos(t)+10*Math.cos(2*t),70*Math.sin(t)-45*Math.cos(2*t)*Math.sin(t)+18*Math.sin(3*t)],sm:0,th:TH.glacier,hill:[[6,2,0],[2,5,2]]},
  {P:bspline(PTS.plage),sm:6,th:TH.plage,hill:[[3.5,3,.5]]},
  {P:bspline(PTS.volcan),sm:6,th:TH.volcan,hill:[[7,2,1],[2.5,4,0]]},
  {P:bspline(PTS.bonbon),sm:6,th:TH.bonbon,hill:[[5,3,2]]},
  {P:FIGURE8,sm:0,th:TH.espace,hill:[[3,4,0]]},
- {P:bspline(PTS.foret),sm:6,th:TH.foret,hill:[[5,3,1]]},
+ {P:bspline(PTS.foret),sm:6,th:TH.foret,hill:[[5,3,1]],ramps:2,cross:[{k:'snail',f:.35,P:16,ph:4,w0:.3,w1:.85},{k:'snail',f:.78,P:17,ph:9,w0:.3,w1:.85}],holes:[[.5,3],[.62,-4],[.92,2]]},
  {P:SKEW,sm:0,th:TH.jungle,hill:[[4,3,0]]},
  {P:bspline(PTS.nuit),sm:6,th:TH.nuit,hill:[[4,2,3]]},
- {P:bspline(PTS.ferme),sm:6,th:TH.ferme,hill:[[3,2,2]]},
+ {P:bspline(PTS.ferme),sm:6,th:TH.ferme,hill:[[3,2,2]],ramps:2,cross:[{k:'cow',f:.3,P:12,ph:3,w0:.4,w1:.78},{k:'duck',f:.58,P:9,ph:5,w0:.5,w1:.82},{k:'cow',f:.82,P:13,ph:7,w0:.4,w1:.78}],holes:[[.45,-3],[.9,4]]},
  {P:LOOP,sm:0,th:TH.canyon,hill:[[3,3,1]]},
  {P:OASIS,sm:3,th:TH.oasis,hill:[[2.5,2,1]],sc:{a:234,b:68,w:8,slow:.93},pond:1},
  // Dangers qui bougent : lave qui tombe (avertissement 1,25 s) et geysers ; k, f = position le long du tour, lats = positions latérales successives, P = période (s), ph = premier cycle (s)
@@ -243,9 +243,13 @@ let sc=null,pond=null;
   if(lava){const core=mk(G.sph,0xff6d00,1),glow=mk(G.sph,0xffab00,.4),tail=mk(G.cone,0xff8f00,.55);core.scale.setScalar(2.1);glow.scale.setScalar(3.2);tail.scale.set(1.7,11,1.7);tail.position.y=7;fxg.add(core,glow,tail)}
   else{const col=mk(G.cyl,0xe1f5fe,.85),top=mk(G.sph,0xffffff,.9);col.position.y=.5;top.scale.setScalar(2.6);fxg.add(col,top);fxg.userData={col,top}}
   return{k:h.k,f:h.f,lats:h.lats,P:h.P,ph:h.ph,r:lava?4.8:3.4,pos:[x,z],y,idx:i,latT:h.lats[0],ring,disc,crater,beam,fx:fxg,armed:0,c:null,er:-1,cr:0}});
+ // Décor qui traverse (canards, vache, escargot) et trous : cycle piloté par stepCross() dans game.js
+ const KC={duck:{mk:()=>mkDuck(),r:1.7,n:3,hop:1},cow:{mk:mkCow,r:3.1,n:1,hop:0},snail:{mk:mkSnail,r:2.7,n:1,hop:1}};
+ const cross=(def.cross||[]).map(c=>{const f=place(c.f,.026,.01);if(f==null)return null;used.push(f);const K=KC[c.k],m=K.mk();g.add(m);return{k:c.k,f,P:c.P,ph:c.ph,w0:c.w0,w1:c.w1,y:H[at(f,0)[3]],idx:at(f,0)[3],m,r:K.r,n:K.n,hop:K.hop,mp:[],lat:0,moving:0,warn:0,onRoad:0}}).filter(Boolean);
+ (def.holes||[]).forEach(([f0,lat])=>{const f=place(f0,.02,.01);if(f==null)return;used.push(f);const[x,z,,i]=at(f,lat),m=mkHole();m.position.set(x,H[i],z);g.add(m);obst.push({k:'hole',pos:[x,z],y:H[i],m,idx:i,lat})});
  const bg=canvasTex(256,(x,w,h)=>{const gr=x.createLinearGradient(0,0,0,h);gr.addColorStop(0,th.sky[0]);gr.addColorStop(1,th.sky[1]);x.fillStyle=gr;x.fillRect(0,0,w,h);
   if(th.stars)for(let k=0;k<140;k++){x.fillStyle='rgba(255,255,255,'+(.35+rnd()*.65)+')';const s=1+rnd()*2.2;x.fillRect(rnd()*w,rnd()*h*.78,s,s)}},th.stars?512:4);
- return{def,idx:ti,g,C,T,Nr,at,H,G:G_,wall,zone,bridge,sc,boxes,pads,obst,haz,ramps,bg,h0}}
+ return{def,idx:ti,g,C,T,Nr,at,H,G:G_,wall,zone,bridge,sc,boxes,pads,obst,haz,ramps,cross,bg,h0}}
 
 // Point du tracé le plus proche (recherche locale autour de l'indice précédent : au croisement on reste sur la bonne branche)
 function nearest(tr,x,z,hint){const C=tr.C;let best=1e9,bi=0;const scan=i=>{const d=(C[i][0]-x)**2+(C[i][1]-z)**2;if(d<best){best=d;bi=i}};

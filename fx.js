@@ -51,6 +51,8 @@ function ring(x,y,z,col,max,dur){const m=new THREE.Mesh(new THREE.RingGeometry(.
 function explode(kind,x,y,z){
  if(kind=='geyser'){puff(x,y+1,z,28,{col:[0xe1f5fe,0x80deea,0xffffff],sp:7,up:20,g:28,size:[.3,.6],life:[.6,1.1]});ring(x,y,z,0x80deea,7,.5);return}
  if(kind=='banana'||kind=='oil'){puff(x,y+.8,z,10,{col:kind=='banana'?[0xffee58,0xffffff,0xfff59d]:[0x1a1a2e,0x4a148c,0x311b92],sp:6,up:8,g:20,size:[.3,.55],life:[.4,.7]});return}
+ const SOFT={duck:[0xfff176,0xffffff,0xffb300],cow:[0xffffff,0x424242,0xf8bbd0],snail:[0x9ccc65,0xc5e1a5,0x8d6e63],hole:[0x6d4c2a,0x8d6e63,0x3e2a14]};
+ if(SOFT[kind]){puff(x,y+1,z,14,{col:SOFT[kind],sp:7,up:8,g:22,size:[.3,.55],life:[.4,.8]});return}
  if(kind=='bonk'||kind=='ram'){puff(x,y+1,z,10,{col:[0xfff176,0xffffff,0xffcc80],sp:8,up:7,g:24,size:[.25,.45],life:[.3,.6]});return}
  const lava=kind=='lava';
  puff(x,y+1,z,24,{col:lava?[0xff3d00,0xff6d00,0xffab00]:[0xffee58,0xffab00,0xff6d00,0xffffff],sp:16,up:16,g:30,size:[.3,.65],life:[.45,.9]});     // étincelles

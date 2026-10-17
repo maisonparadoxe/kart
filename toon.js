@@ -130,3 +130,29 @@ const _oil={};const oilMat=(c=0x1a1a2e)=>_oil[c]||(_oil[c]=new THREE.MeshBasicMa
 const PAD_TEX=canvasTex(128,(x,w,h)=>{x.fillStyle='#ff6d00';x.fillRect(0,0,w,h);x.lineWidth=10;x.strokeStyle='#111';x.strokeRect(5,5,w-10,h-10);
  x.lineJoin='round';for(let i=0;i<3;i++){const y=h*(.12+i*.28);x.beginPath();x.moveTo(w*.18,y+h*.2);x.lineTo(w/2,y);x.lineTo(w*.82,y+h*.2);x.lineWidth=18;x.strokeStyle='#111';x.stroke();x.lineWidth=10;x.strokeStyle='#ffee58';x.stroke()}},96);
 const PAD_MAT=new THREE.MeshBasicMaterial({map:PAD_TEX});
+
+// ---- Décor qui traverse : canards (file indienne), vache, escargot ; trou dans la route ----
+// Chaque modèle regarde vers +z (sens de la marche) ; « ex » = point d'exclamation d'avertissement.
+function bang(g,y){const e=new THREE.Group(),m=new THREE.MeshBasicMaterial({color:0xffd600});const a=new THREE.Mesh(G.box,m);a.scale.set(.35,1.1,.35);a.position.y=.7;const b=new THREE.Mesh(G.sph,m);b.scale.setScalar(.22);b.position.y=0;e.add(a,b);e.position.y=y;e.visible=false;g.add(e);g.userData.ex=e}
+function eyes2(g,y,z,dx,s){for(const sd of[-1,1]){part(g,G.sph,0xffffff,sd*dx,y,z,.03).scale.setScalar(s);part(g,G.sph,0x111111,sd*dx,y,z+s*.7,0).scale.setScalar(s*.5)}}
+function mkDuck(n=3,gap=2.6){const g=new THREE.Group();g.userData.mem=[];
+ for(let k=0;k<n;k++){const d=new THREE.Group();d.position.z=-k*gap;
+  part(d,G.sph,0xffee58,0,.8,0).scale.set(.85,.7,1.05);part(d,G.sph,0xfff59d,0,1.0,-.9,.05).scale.set(.45,.4,.45);
+  part(d,G.sph,0xffee58,0,1.65,.7).scale.setScalar(.5);part(d,G.cone,0xff9800,0,1.6,1.25,.04).scale.set(.22,.5,.22);d.children[3].rotation.x=Math.PI/2;
+  eyes2(d,1.8,.95,.22,.12);g.add(d);g.userData.mem.push(d)}
+ bang(g,3.6);return g}
+function mkCow(){const g=new THREE.Group();g.userData.mem=[g];
+ part(g,G.box,0xfafafa,0,2.1,0).scale.set(1.9,1.6,3.2);
+ for(const[x,y,z]of[[.97,2.4,.4],[-.97,1.9,-.6],[0,3.0,-.5],[.97,1.8,-1]])part(g,G.box,0x37474f,x,y,z,0).scale.set(.1+Math.abs(x)*.3,.6,.7);
+ part(g,G.box,0xfafafa,0,2.9,2.1).scale.set(1.1,1.0,1.1);part(g,G.box,0xf8bbd0,0,2.65,2.75,.04).scale.set(.8,.5,.35);
+ for(const sd of[-1,1]){part(g,G.cone,0xfff3e0,sd*.55,3.6,2.0,.04).scale.set(.18,.5,.18);eyes2(g,3.1,2.62,sd*.4,.14);
+  for(const z of[-1.1,1.1])part(g,G.box,0xeeeeee,sd*.65,.7,z).scale.set(.45,1.4,.45)}
+ part(g,G.box,0xf8bbd0,0,1.45,.3,0).scale.set(.6,.18,.9);part(g,G.box,0x37474f,0,2.8,-1.9,.04).scale.set(.15,1.1,.15);
+ bang(g,5.2);return g}
+function mkSnail(){const g=new THREE.Group();g.userData.mem=[g];
+ part(g,G.sph,0xaed581,0,.8,0).scale.set(1.0,.8,2.6);part(g,G.sph,0xaed581,0,1.8,1.9).scale.set(.6,.9,.6);
+ const sh=part(g,G.sph,0x8d6e63,0,2.3,-.5);sh.scale.setScalar(1.6);sh.rotation.z=.2;part(g,G.sph,0xffcc80,.95,2.4,-.5,.04).scale.set(.12,.9,.9);
+ for(const sd of[-1,1]){part(g,G.cyl,0xaed581,sd*.3,2.7,2.0,.03).scale.set(.08,.8,.08);part(g,G.sph,0x111111,sd*.3,3.2,2.0,0).scale.setScalar(.16)}
+ bang(g,4.8);return g}
+function mkHole(){const g=new THREE.Group(),rim=new THREE.Mesh(new THREE.CircleGeometry(3.4,20).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x6d4c2a})),d=new THREE.Mesh(new THREE.CircleGeometry(2.3,20).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x1b1208})),d2=new THREE.Mesh(new THREE.CircleGeometry(1.3,16).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0}));
+ rim.position.y=.1;d.position.y=.14;d2.position.y=.18;g.add(rim,d,d2);return g}

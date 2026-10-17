@@ -7,6 +7,10 @@ const LINES={
  lava:['{v} reçoit une boule de lave !','La lave frappe {v} ! Ça sent le roussi.','{v} fait un barbecue involontaire !','Pluie de lave sur {v} !','{v} n’a pas esquivé le caillou en feu !'],
  geyser:['Geyser sous {v} ! Quel tourbillon !','{v} décolle grâce au geyser !','{v} prend une douche brûlante !'],
  shortcut:['{n} prend le raccourci !','{n} s’engouffre dans le passage secret !','{n} coupe par le raccourci, quel culot !','Raccourci pour {n} ! Pourvu qu’il passe les tonneaux.'],
+ duck:['{v} a renversé la famille canard !','Coin-coin ! {v} n’a pas freiné pour les canards.','{v} a mis un canard en vol plané !'],
+ cow:['MEUH ! {v} est rentré dans la vache !','La vache a gagné, {v} est au tapis.','Laissez passer la vache ! {v} ne l’a pas fait.'],
+ snail:['{v} est rentré dans l’escargot ! Il n’allait pourtant pas vite.','{v} s’est fait arrêter par un escargot… la honte !'],
+ hole:['{v} tombe dans un trou !','Gloups ! {v} a trouvé un nid-de-poule.','{v} a visité les sous-sols !'],
  join:['Bienvenue {n} !','{n} entre dans l’arène !','Tiens, voilà {n} ! Joli emblème.','{n} est dans la place !'],
  start:['Bienvenue sur {track} ! Attachez vos casques !','{track} ! Les moteurs rugissent… enfin, ils toussent.','Ça va chauffer sur {track} !','Silence dans les tribunes… c’est parti pour {track} !'],
  final:['Dernière course ! {n} mène le championnat avec {pts} points !','Tout se joue maintenant ! {n} est en tête du championnat.','Dernière manche ! Qui va détrôner {n} ?'],
@@ -28,7 +32,7 @@ const LINES={
  champion:['{n} est champion ! Bravo à tous !','Et le grand champion est… {n} !','{n} soulève la coupe ! Quelle saison !']};
 const CMT=(()=>{let freeAt=0,lastEnd=-1e9,queue=[],recent=[],last={},hits=[],hitT=0,voice=null,tm=0;
  let mode=(()=>{try{return localStorage.getItem('kp-voice')||'blabla'}catch(e){return'blabla'}})();
- const COOL={jump:12000,fall:8000,lava:9000,geyser:9000,shortcut:14000,lead:12000,bonk:20000,oil:8000,join:3000,block:8000,ram:10000},GAP=[6000,4500,1500,0],t=()=>performance.now();
+ const COOL={jump:12000,fall:8000,lava:9000,geyser:9000,shortcut:14000,lead:12000,bonk:20000,oil:8000,duck:12000,cow:10000,snail:12000,hole:10000,join:3000,block:8000,ram:10000},GAP=[6000,4500,1500,0],t=()=>performance.now();
  const pickVoice=()=>{if(!window.speechSynthesis)return null;const v=speechSynthesis.getVoices().filter(v=>/^fr/i.test(v.lang));return v.find(v=>/google|natural|premium|enhanced/i.test(v.name))||v[0]||null};
  if(window.speechSynthesis){voice=pickVoice();speechSynthesis.onvoiceschanged=()=>{voice=pickVoice()}}
  const fill=(s,o)=>s.replace(/\{(\w)(\w*)\}/g,(_,a,b)=>o[a+b]!=null?o[a+b]:'');
@@ -50,7 +54,7 @@ const CMT=(()=>{let freeAt=0,lastEnd=-1e9,queue=[],recent=[],last={},hits=[],hit
    const best=h.sort((a,b)=>b.w-a.w)[0];say(best.type,best.o,best.w>=3?1:0)}},150);
  // victime v, cause k, auteur a (peut être null). On ignore les histoires de bots entre eux.
  function hit(v,k,a){if(v.bot&&(!a||a.bot))return;
-  const type=k=='bomb'?(a===v?'bombSelf':'bomb'):k,w={bomb:3,bombSelf:3,banana:2,ram:2,oil:1,block:1,bonk:0,lava:2,geyser:2,fall:2}[type];
+  const type=k=='bomb'?(a===v?'bombSelf':'bomb'):k,w={bomb:3,bombSelf:3,banana:2,ram:2,oil:1,block:1,bonk:0,lava:2,geyser:2,fall:2,duck:1,cow:2,snail:1,hole:1}[type];
   if(!hits.length)hitT=t()+450;hits.push({type,w,o:{v:v.name,a:a?a.name:'quelqu’un'}})}
  function reset(){queue=[];hits=[];freeAt=0;lastEnd=-1e9;clearTimeout(tm);const el=document.getElementById('cmt');if(el)el.className='';try{window.speechSynthesis&&speechSynthesis.cancel()}catch(e){}}
  return{say,hit,reset,mode:()=>mode,hasVoice:()=>!!voice,setMode:m=>{mode=m;try{localStorage.setItem('kp-voice',m)}catch(e){}}}})();
