@@ -43,6 +43,10 @@ h1,h2,.card b,.msg,#msg,#big,.vp,.boom,.res td{font-family:Bangers,Impact,system
 .vp .lap{position:absolute;right:calc(var(--u)*1.5);top:calc(var(--u)*1.5);font-size:calc(var(--u)*5);background:#fff;color:var(--ink);border:calc(var(--u)*0.4) solid var(--ink);border-radius:calc(var(--u)*1);padding:0 calc(var(--u)*1.2);box-shadow:calc(var(--u)*0.5) calc(var(--u)*0.5) 0 var(--ink);transform:rotate(2deg)}
 .vp .slot{position:absolute;left:50%;top:calc(var(--u)*1.5);transform:translateX(-50%);width:calc(var(--u)*10);height:calc(var(--u)*10);border-radius:50%;background:#fff;border:calc(var(--u)*0.5) solid var(--ink);box-shadow:calc(var(--u)*0.5) calc(var(--u)*0.5) 0 var(--ink);display:flex;align-items:center;justify-content:center;font-size:calc(var(--u)*6)}
 .vp .slot.empty{opacity:.45}
+.vp .flash{position:absolute;inset:0;background:radial-gradient(circle,transparent 25%,var(--fc,#fff) 130%);opacity:0;pointer-events:none}.vp .flash.on{animation:fl .45s ease-out}
+@keyframes fl{0%{opacity:.95}100%{opacity:0}}
+.vp .rbp{position:absolute;left:50%;bottom:calc(var(--u)*2);transform:translateX(-50%);font-size:calc(var(--u)*3.4);color:#fff;background:#ff6d00;border:calc(var(--u)*.4) solid var(--ink);border-radius:calc(var(--u)*1);padding:0 calc(var(--u)*1.4);box-shadow:calc(var(--u)*.4) calc(var(--u)*.4) 0 var(--ink);display:none;white-space:nowrap}
+.vp.rb .rbp{display:block;animation:rbp .5s ease-in-out infinite alternate}@keyframes rbp{to{transform:translateX(-50%) scale(1.07)}}
 .vp .tag{position:absolute;left:calc(var(--u)*1.5);top:calc(var(--u)*15);font-size:calc(var(--u)*3);background:var(--c);border:calc(var(--u)*0.4) solid var(--ink);border-radius:calc(var(--u)*1);padding:calc(var(--u)*0.2) calc(var(--u)*1);display:flex;align-items:center;gap:calc(var(--u)*0.8);color:#fff;-webkit-text-stroke:calc(var(--u)*0.12) var(--ink)}
 .vp .tag img{width:calc(var(--u)*4);height:calc(var(--u)*4)}
 .vp.off::after{content:'📡 Manette déconnectée — pilote auto';position:absolute;left:50%;top:calc(var(--u)*14);transform:translateX(-50%);background:var(--ink);color:var(--y);padding:calc(var(--u)*0.6) calc(var(--u)*1.6);border-radius:calc(var(--u)*1);font-size:calc(var(--u)*2.8)}
@@ -76,4 +80,4 @@ h1,h2,.card b,.msg,#msg,#big,.vp,.boom,.res td{font-family:Bangers,Impact,system
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
-<script src="shared.js"></script><script src="audio.js"></script><script src="commentator.js"></script><script src="toon.js"></script><script src="tracks.js"></script><script src="game.js"></script>
+<script src="shared.js"></script><script src="audio.js"></script><script src="commentator.js"></script><script src="toon.js"></script><script src="tracks.js"></script><script src="fx.js"></script><script src="game.js"></script>
